@@ -28,7 +28,6 @@
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
-
 html { scroll-behavior: smooth; }
 
 body {
@@ -45,6 +44,183 @@ body {
   flex-direction: column;
 }
 
+/* HAMBURGER BUTTON */
+.menu-btn {
+  position: fixed;
+  top: 1.4rem;
+  right: 1.6rem;
+  z-index: 200;
+  background: var(--bg-card);
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  padding: 0.55rem 0.7rem;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: background 0.15s, border-color 0.15s;
+}
+.menu-btn:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--accent-dim);
+}
+.menu-btn span {
+  display: block;
+  width: 20px;
+  height: 2px;
+  background: var(--text-muted);
+  border-radius: 2px;
+  transition: background 0.15s;
+}
+.menu-btn:hover span { background: var(--accent-bright); }
+
+/* SIDEBAR OVERLAY */
+.sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  z-index: 300;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+.sidebar-overlay.open {
+  opacity: 1;
+  pointer-events: all;
+}
+
+/* SIDEBAR PANEL */
+.sidebar-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 340px;
+  max-width: 90vw;
+  background: var(--bg-elevated);
+  border-left: 1px solid var(--line-strong);
+  z-index: 400;
+  transform: translateX(100%);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+.sidebar-panel.open {
+  transform: translateX(0);
+}
+
+.sidebar-panel-header {
+  padding: 1.8rem 1.8rem 1.4rem;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.sidebar-panel-brand {
+  font-family: var(--display);
+  font-style: italic;
+  font-size: 1.1rem;
+  color: var(--accent);
+}
+.sidebar-panel-sub {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--text-dim);
+  margin-top: 0.2rem;
+}
+
+.sidebar-close {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 1.4rem;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0.2rem;
+  transition: color 0.15s;
+}
+.sidebar-close:hover { color: var(--text); }
+
+.sidebar-panel-body {
+  padding: 1.4rem 1.8rem;
+  flex: 1;
+}
+
+.sidebar-section-label {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--text-dim);
+  margin-bottom: 0.8rem;
+  margin-top: 1.6rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--line);
+}
+.sidebar-section-label:first-child { margin-top: 0; }
+
+.sidebar-chapter-link {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.9rem;
+  padding: 0.85rem 0;
+  border-bottom: 1px solid var(--line);
+  text-decoration: none;
+  transition: background 0.15s;
+}
+.sidebar-chapter-link:last-child { border-bottom: none; }
+.sidebar-chapter-link:hover .sidebar-chapter-title { color: var(--accent-bright); }
+
+.sidebar-chapter-num {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  color: var(--accent);
+  flex-shrink: 0;
+  padding-top: 0.18rem;
+  letter-spacing: 0.05em;
+}
+.sidebar-chapter-title {
+  font-family: var(--display);
+  font-size: 1rem;
+  color: var(--text);
+  line-height: 1.25;
+  transition: color 0.15s;
+}
+.sidebar-chapter-title em { font-style: italic; color: var(--accent-bright); }
+.sidebar-chapter-desc {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  line-height: 1.4;
+  margin-top: 0.2rem;
+}
+
+.sidebar-utility-link {
+  display: block;
+  padding: 0.7rem 0;
+  text-decoration: none;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--line);
+  transition: color 0.15s;
+}
+.sidebar-utility-link:last-child { border-bottom: none; }
+.sidebar-utility-link:hover { color: var(--accent-bright); }
+
+.sidebar-panel-footer {
+  padding: 1.4rem 1.8rem;
+  border-top: 1px solid var(--line);
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  line-height: 1.8;
+}
+
+/* MAIN */
 main {
   max-width: 920px;
   margin: 0 auto;
@@ -53,7 +229,6 @@ main {
   width: 100%;
 }
 
-/* HEADER */
 header {
   margin-bottom: 5rem;
   padding-bottom: 3rem;
@@ -78,7 +253,6 @@ h1 {
   margin-bottom: 1.5rem;
   color: var(--text);
 }
-
 h1 em {
   font-style: italic;
   color: var(--accent);
@@ -103,7 +277,6 @@ h1 em {
   letter-spacing: 0.12em;
   margin-top: 2.5rem;
 }
-
 .meta strong {
   display: block;
   color: var(--text-muted);
@@ -113,7 +286,6 @@ h1 em {
   letter-spacing: 0.05em;
 }
 
-/* SECTION TITLES */
 .section-title {
   font-family: var(--mono);
   font-size: 0.72rem;
@@ -125,15 +297,10 @@ h1 em {
   border-bottom: 1px solid var(--line);
 }
 
-section {
-  margin-bottom: 5rem;
-}
+section { margin-bottom: 5rem; }
 
 /* CHAPTER CARDS */
-.chapters {
-  display: grid;
-  gap: 1.5rem;
-}
+.chapters { display: grid; gap: 1.5rem; }
 
 .chapter {
   display: block;
@@ -147,24 +314,19 @@ section {
   position: relative;
   overflow: hidden;
 }
-
 .chapter::before {
   content: "";
   position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
+  left: 0; top: 0; bottom: 0;
   width: 3px;
   background: var(--accent-dim);
   transition: all 0.25s ease;
 }
-
 .chapter:hover {
   background: var(--bg-card-hover);
   transform: translateX(4px);
   border-color: var(--accent-dim);
 }
-
 .chapter:hover::before {
   background: var(--accent);
   width: 4px;
@@ -181,7 +343,6 @@ section {
   color: var(--accent);
   margin-bottom: 0.8rem;
 }
-
 .chapter-num {
   display: inline-block;
   padding: 0.2rem 0.6rem;
@@ -189,11 +350,7 @@ section {
   border-radius: 3px;
   color: var(--accent);
 }
-
-.chapter-time {
-  color: var(--text-dim);
-  letter-spacing: 0.12em;
-}
+.chapter-time { color: var(--text-dim); letter-spacing: 0.12em; }
 
 .chapter-title {
   font-family: var(--display);
@@ -204,11 +361,7 @@ section {
   margin-bottom: 0.7rem;
   color: var(--text);
 }
-
-.chapter-title em {
-  font-style: italic;
-  color: var(--accent-bright);
-}
+.chapter-title em { font-style: italic; color: var(--accent-bright); }
 
 .chapter-desc {
   color: var(--text-muted);
@@ -223,7 +376,6 @@ section {
   flex-wrap: wrap;
   margin-top: 1rem;
 }
-
 .tag {
   font-family: var(--mono);
   font-size: 0.65rem;
@@ -247,7 +399,6 @@ section {
   text-transform: uppercase;
   color: var(--accent-bright);
 }
-
 .chapter-cta::after {
   content: "→";
   font-family: var(--display);
@@ -255,18 +406,14 @@ section {
   font-size: 1rem;
   transition: transform 0.2s ease;
 }
+.chapter:hover .chapter-cta::after { transform: translateX(3px); }
 
-.chapter:hover .chapter-cta::after {
-  transform: translateX(3px);
-}
-
-/* UTILITY LINKS */
+/* UTILITY */
 .utility-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 1rem;
 }
-
 .utility {
   display: block;
   padding: 1.2rem 1.4rem;
@@ -277,12 +424,10 @@ section {
   color: inherit;
   transition: all 0.2s ease;
 }
-
 .utility:hover {
   background: var(--bg-card-hover);
   border-color: var(--accent-dim);
 }
-
 .utility-label {
   font-family: var(--mono);
   font-size: 0.68rem;
@@ -291,7 +436,6 @@ section {
   color: var(--accent);
   margin-bottom: 0.4rem;
 }
-
 .utility-title {
   font-family: var(--display);
   font-size: 1rem;
@@ -299,36 +443,10 @@ section {
   color: var(--text);
   margin-bottom: 0.3rem;
 }
-
 .utility-desc {
   font-size: 0.85rem;
   color: var(--text-muted);
   line-height: 1.4;
-}
-
-/* COMING SOON */
-.coming-soon {
-  padding: 1.8rem 2rem;
-  background: var(--bg-elevated);
-  border: 1px dashed var(--line-strong);
-  border-radius: 6px;
-  text-align: center;
-}
-
-.coming-soon-label {
-  font-family: var(--mono);
-  font-size: 0.7rem;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--text-dim);
-  margin-bottom: 0.5rem;
-}
-
-.coming-soon-text {
-  font-family: var(--display);
-  font-style: italic;
-  font-size: 1.1rem;
-  color: var(--text-muted);
 }
 
 /* FOOTER */
@@ -338,7 +456,6 @@ footer {
   border-top: 1px solid var(--line);
   background: var(--bg-elevated);
 }
-
 .footer-inner {
   max-width: 920px;
   margin: 0 auto;
@@ -350,7 +467,6 @@ footer {
   color: var(--text-dim);
   letter-spacing: 0.1em;
 }
-
 .footer-inner em {
   font-family: var(--display);
   font-style: italic;
@@ -370,15 +486,77 @@ footer {
 </head>
 <body>
 
+<!-- HAMBURGER BUTTON -->
+<button class="menu-btn" id="menuBtn" aria-label="Åbn kapitelmenu">
+  <span></span>
+  <span></span>
+  <span></span>
+</button>
+
+<!-- OVERLAY -->
+<div class="sidebar-overlay" id="overlay"></div>
+
+<!-- SIDEBAR PANEL -->
+<aside class="sidebar-panel" id="sidebarPanel">
+  <div class="sidebar-panel-header">
+    <div>
+      <div class="sidebar-panel-brand">Vidensbank</div>
+      <div class="sidebar-panel-sub">Ryan Velin · Metronome</div>
+    </div>
+    <button class="sidebar-close" id="sidebarClose" aria-label="Luk">×</button>
+  </div>
+
+  <div class="sidebar-panel-body">
+
+    <div class="sidebar-section-label">Kapitler</div>
+
+    <a href="vidensbank.html" class="sidebar-chapter-link">
+      <div class="sidebar-chapter-num">01</div>
+      <div>
+        <div class="sidebar-chapter-title">Visuelle embeddings &amp; <em>VisualScanner</em></div>
+        <div class="sidebar-chapter-desc">CLIP, embeddings, MobileCLIP 2, Apple Silicon · ~25 min</div>
+      </div>
+    </a>
+
+    <a href="vidensbank-02-rag.html" class="sidebar-chapter-link">
+      <div class="sidebar-chapter-num">02</div>
+      <div>
+        <div class="sidebar-chapter-title">RAG &amp; <em>token-økonomi</em></div>
+        <div class="sidebar-chapter-desc">Tokens, context windows, RAG-arkitektur, vector DB · ~30 min</div>
+      </div>
+    </a>
+
+    <a href="vidensbank-03-fcp-nfs.html" class="sidebar-chapter-link">
+      <div class="sidebar-chapter-num">03</div>
+      <div>
+        <div class="sidebar-chapter-title">FCP Libraries &amp; <em>NFS</em></div>
+        <div class="sidebar-chapter-desc">SQLite på netværk, RAID 6, 100 Knive-data · ~25 min</div>
+      </div>
+    </a>
+
+    <div class="sidebar-section-label">Guides</div>
+
+    <a href="setup-github-pages.html" class="sidebar-utility-link">GitHub Pages opsætning</a>
+
+  </div>
+
+  <div class="sidebar-panel-footer">
+    3 kapitler publiceret<br>
+    HTML bank · v1.1 · April 2026<br>
+    Internal · Metronome / Nordisk Film TV
+  </div>
+</aside>
+
+<!-- MAIN -->
 <main>
 
 <header>
   <div class="eyebrow">Ryan Velin · Personal knowledge base</div>
   <h1>HTML <em>bank.</em></h1>
-  <p class="lead">Min personlige vidensbank — tekniske dybdedykk og beslutningsdokumentation. Bygges ud løbende, kapitel for kapitel.</p>
+  <p class="lead">Min personlige vidensbank — tekniske dybdedyk og beslutningsdokumentation. Bygges ud løbende, kapitel for kapitel.</p>
 
   <div class="meta">
-    <span>Kapitler<strong>2 publiceret</strong></span>
+    <span>Kapitler<strong>3 publiceret</strong></span>
     <span>Sidst opdateret<strong>April 2026</strong></span>
     <span>Format<strong>HTML · læs i browser</strong></span>
   </div>
@@ -423,10 +601,23 @@ footer {
       <div class="chapter-cta">Læs kapitlet</div>
     </a>
 
-    <div class="coming-soon">
-      <div class="coming-soon-label">Kapitel 03</div>
-      <div class="coming-soon-text">Kommer snart — emnet er ikke valgt endnu</div>
-    </div>
+    <a href="vidensbank-03-fcp-nfs.html" class="chapter">
+      <div class="chapter-meta">
+        <span class="chapter-num">03</span>
+        <span class="chapter-time">~ 25 min læsetid</span>
+      </div>
+      <div class="chapter-title">FCP Libraries &amp; <em>NFS</em></div>
+      <div class="chapter-desc">Hvorfor et FCP Library ikke hører til på et NAS. SQLite's arkitekturelle begrænsninger dokumenteret fra officielle kilder, og hvad FCPMonitor-målinger fra 100 Knive-klipperummet (marts 2026) viser i praksis.</div>
+      <div class="chapter-tags">
+        <span class="tag">FCP</span>
+        <span class="tag">SQLite</span>
+        <span class="tag">NFS</span>
+        <span class="tag">NAS</span>
+        <span class="tag">RAID 6</span>
+        <span class="tag">100 Knive</span>
+      </div>
+      <div class="chapter-cta">Læs kapitlet</div>
+    </a>
 
   </div>
 </section>
@@ -435,13 +626,11 @@ footer {
   <div class="section-title">Værktøjer &amp; guides</div>
 
   <div class="utility-grid">
-
     <a href="setup-github-pages.html" class="utility">
       <div class="utility-label">Setup</div>
       <div class="utility-title">GitHub Pages opsætning</div>
       <div class="utility-desc">Step-by-step guide til at lægge HTML-filer på GitHub Pages. 100% klik-baseret, ingen terminal.</div>
     </a>
-
   </div>
 </section>
 
@@ -449,10 +638,37 @@ footer {
 
 <footer>
   <div class="footer-inner">
-    <div>HTML <em>bank.</em> · v 1.0 · April 2026</div>
+    <div>HTML <em>bank.</em> · v 1.1 · April 2026</div>
     <div>Internal · Metronome / Nordisk Film TV</div>
   </div>
 </footer>
+
+<script>
+const menuBtn = document.getElementById('menuBtn');
+const sidebarPanel = document.getElementById('sidebarPanel');
+const overlay = document.getElementById('overlay');
+const sidebarClose = document.getElementById('sidebarClose');
+
+function openSidebar() {
+  sidebarPanel.classList.add('open');
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeSidebar() {
+  sidebarPanel.classList.remove('open');
+  overlay.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+menuBtn.addEventListener('click', openSidebar);
+sidebarClose.addEventListener('click', closeSidebar);
+overlay.addEventListener('click', closeSidebar);
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeSidebar();
+});
+</script>
 
 </body>
 </html>
