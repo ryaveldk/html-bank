@@ -738,6 +738,176 @@ details.deep-dive .deep-content p:last-child { margin-bottom: 0; }
 }
 
 .colophon p { color: inherit; margin-bottom: 0.5rem; }
+
+/* PRAKSIS-SEKTIONER — score-ladders, query-tabeller, TL;DR */
+.score-ladder {
+  margin: 2rem 0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.score-row {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  border-bottom: 1px solid var(--line);
+  align-items: stretch;
+}
+
+.score-row:last-child { border-bottom: none; }
+
+.score-range {
+  padding: 1.1rem 1.3rem;
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  letter-spacing: 0.05em;
+  border-right: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-elevated);
+}
+
+.score-range.strong { color: var(--success); }
+.score-range.ok { color: var(--accent-bright); }
+.score-range.weak { color: var(--warning); }
+.score-range.noise { color: var(--text-dim); }
+
+.score-desc {
+  padding: 1.1rem 1.5rem;
+  font-size: 0.95rem;
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.score-desc strong {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  display: block;
+  margin-bottom: 0.25rem;
+  font-weight: 500;
+}
+
+.score-row.strong .score-desc strong { color: var(--success); }
+.score-row.ok .score-desc strong { color: var(--accent-bright); }
+.score-row.weak .score-desc strong { color: var(--warning); }
+.score-row.noise .score-desc strong { color: var(--text-dim); }
+
+.query-table {
+  margin: 1.5rem 0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  overflow: hidden;
+  font-size: 0.9rem;
+}
+
+.query-table .qt-title {
+  background: var(--bg-elevated);
+  padding: 0.8rem 1.3rem;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+  border-bottom: 1px solid var(--line);
+}
+
+.qt-row {
+  display: grid;
+  grid-template-columns: 1fr 100px 140px;
+  border-bottom: 1px solid var(--line);
+  align-items: center;
+}
+
+.qt-row:last-child { border-bottom: none; }
+
+.qt-row.head {
+  background: rgba(0,0,0,0.15);
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.qt-cell {
+  padding: 0.75rem 1.3rem;
+  border-right: 1px solid var(--line);
+}
+
+.qt-cell:last-child { border-right: none; }
+
+.qt-cell.query code {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.85rem;
+  color: var(--text);
+}
+
+.qt-cell.score {
+  font-family: var(--mono);
+  text-align: right;
+  color: var(--text-muted);
+}
+
+.qt-cell.score.best {
+  color: var(--accent-bright);
+  font-weight: 700;
+}
+
+.qt-cell.clip {
+  font-family: var(--mono);
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.qt-cell.clip.miss { color: var(--warning); }
+.qt-cell.clip.hit { color: var(--success); }
+
+.tldr {
+  margin: 3rem 0;
+  padding: 1.8rem 2rem;
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  border-radius: 6px;
+}
+
+.tldr-label {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 1rem;
+}
+
+.tldr ol {
+  padding-left: 1.4rem;
+  margin-bottom: 0;
+}
+
+.tldr li {
+  margin-bottom: 0.8rem;
+  color: var(--text);
+  font-size: 0.98rem;
+  line-height: 1.5;
+}
+
+.tldr li:last-child { margin-bottom: 0; }
+
+/* RESPONSIVE — opdater for nye komponenter */
+@media (max-width: 1000px) {
+  .score-row { grid-template-columns: 1fr; }
+  .score-range { border-right: none; border-bottom: 1px solid var(--line); }
+  .qt-row { grid-template-columns: 1fr; }
+  .qt-cell { border-right: none; border-bottom: 1px solid var(--line); }
+  .qt-cell:last-child { border-bottom: none; }
+  .qt-cell.score { text-align: left; }
+}
 </style>
 </head>
 <body>
@@ -762,6 +932,13 @@ details.deep-dive .deep-content p:last-child { margin-bottom: 0; }
     <li><a href="#mobileclip">Apple MobileCLIP 2</a></li>
     <li><a href="#huggingface">Hugging Face</a></li>
     <li><a href="#beslutning">Vores beslutning</a></li>
+    <li><a href="#praksis-intro">MobileCLIP i praksis</a></li>
+    <li><a href="#praksis-findings">Fem findings</a></li>
+    <li><a href="#praksis-visuelt">Visuelt vs. tematisk</a></li>
+    <li><a href="#praksis-scores">Score-kalibrering</a></li>
+    <li><a href="#praksis-queries">Enkeltord vs. sætninger</a></li>
+    <li><a href="#praksis-styrker">Styrker og svagheder</a></li>
+    <li><a href="#praksis-workflow">Arbejdsgang</a></li>
     <li><a href="#fremtiden">Fremtiden & Dashboard</a></li>
     <li><a href="#ordbog">Ordbog</a></li>
     <li><a href="#videre">Videre læsning</a></li>
@@ -781,12 +958,12 @@ details.deep-dive .deep-content p:last-child { margin-bottom: 0; }
 <header class="hero">
   <div class="eyebrow">Teknisk vidensbank · Kapitel 01</div>
   <h1 class="hero-title">Hvordan computere <em>ser</em> video — og finder det de leder efter.</h1>
-  <p class="hero-lead">En guide til visuelle embeddings, CLIP-modeller, og hvorfor vi skifter VisualScanner over på Apples MobileCLIP 2. Skrevet til at læses fra start til slut, eller hoppes rundt i efter behov.</p>
+  <p class="hero-lead">En guide til visuelle embeddings, CLIP-modeller, og hvorfor vi skifter VisualScanner over på Apples MobileCLIP 2. Plus hands-on findings fra første test på rigtige produktionsdata. Skrevet til at læses fra start til slut, eller hoppes rundt i efter behov.</p>
 
   <div class="hero-meta">
-    <span>Læsetid<strong>~ 25 min</strong></span>
+    <span>Læsetid<strong>~ 40 min</strong></span>
     <span>Forudsætninger<strong>Ingen</strong></span>
-    <span>Niveau<strong>Begynder → Teknisk</strong></span>
+    <span>Niveau<strong>Begynder → Praktisk</strong></span>
   </div>
 </header>
 
@@ -1349,9 +1526,380 @@ details.deep-dive .deep-content p:last-child { margin-bottom: 0; }
   </div>
 </section>
 
-<!-- ═══════════════ 10. FREMTIDEN ═══════════════ -->
+<!-- ═══════════════ 10. PRAKSIS-INTRO ═══════════════ -->
+<section id="praksis-intro">
+  <span class="section-num">10 — Fra teori til praksis</span>
+  <h2>MobileCLIP i <em>virkeligheden</em></h2>
+
+  <p class="lead">Ovenstående var teorien. Nu kommer hvad vi lærte da modellen mødte 1.194 rigtige frames fra "Bali på menuen" — første test af MobileCLIP 2-S4 på produktionsmateriale.</p>
+
+  <p>Testen var lille og afgrænset: 34 klip, natur-B-roll, ingen interviews eller dramaproduktion. Men det gav os den første ærlige data om hvordan modellen opfører sig på <em>vores</em> materiale, og det fortæller meget om hvordan VisualScanner skal bygges videre.</p>
+
+  <div class="nudge">
+    <div class="nudge-icon">¶</div>
+    <div class="nudge-body">
+      <strong>Struktur</strong>
+      Sektionerne herunder starter med fem findings som TL;DR, og udfolder så hver af dem med konkrete eksempler, scores, og praktiske konsekvenser. Hvis du er travl, læs kun "Fem findings" — resten er detaljerne.
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ 11. PRAKSIS-FINDINGS ═══════════════ -->
+<section id="praksis-findings">
+  <span class="section-num">11 — Sammenfatning</span>
+  <h2>Fem <em>findings</em></h2>
+
+  <p class="lead">Alt i de følgende sektioner destilleret. Læs kun dette hvis du ikke har tid til resten — men vid at hvert punkt er uddybet nedenfor.</p>
+
+  <div class="tldr">
+    <div class="tldr-label">TL;DR</div>
+    <ol>
+      <li><strong>Modellen matcher visuelt indhold, ikke tematisk.</strong> Tænk "hvad ser jeg i frame'et" — ikke "hvad handler scenen om".</li>
+      <li><strong>Enkeltord virker</strong> og er ofte nok. Sætninger hæver scoren 0,01–0,03 men rammer typisk samme klip.</li>
+      <li><strong>Scores 0,30+ er typisk relevante.</strong> 0,20–0,30 er "måske". Under 0,20 er gæt.</li>
+      <li><strong>Hvis du gætter forkert på indholdet</strong>, får du skrald tilbage. Sample altid et par frames først.</li>
+      <li><strong>Stærk på objekter, miljøer, komposition og lys.</strong> Svag på handlinger, følelser og abstrakte begreber.</li>
+    </ol>
+  </div>
+
+  <div class="insight">
+    Modellen ser hvad kameraet fangede. Ikke hvad scenen betyder.
+    <cite>— Den vigtigste pointe</cite>
+  </div>
+</section>
+
+<!-- ═══════════════ 12. VISUELT VS. TEMATISK ═══════════════ -->
+<section id="praksis-visuelt">
+  <span class="section-num">12 — Finding #1</span>
+  <h2>Visuelt indhold — ikke <em>tematisk</em></h2>
+
+  <p>Det første eksperiment gik galt. Titlen "Bali på menuen" bragte os til at søge efter mad: <code>a close-up of a plate of food</code>, <code>grilled meat on a plate</code>, <code>hands preparing ingredients</code>. Alle gav irrelevante matches.</p>
+
+  <p>Et langt øjeblik tænkte jeg "modellen virker ikke". Og så kiggede jeg faktisk på klippene.</p>
+
+  <p>Klippene indeholdt <em>intet</em> af det vi søgte på. Det var natur-B-roll: vandfald, jungle-kroner, en edderkop tæt på, et frugtmarked. Ingen gryder, ingen tallerkener, ingen hænder der skærer. Vi havde gættet på et indhold baseret på program-titlen — og gættede forkert.</p>
+
+  <div class="card warning">
+    <div class="card-label">Modellen gør altid noget</div>
+    <p>En cosine-søgning vil <em>altid</em> returnere en rangering. Også når intet i datasættet matcher. Den finder bare den vektor der ligger nærmest din query — selvom afstanden er stor. Det er derfor lav score er så vigtig: den er signalet på "jeg fandt noget, men det er ikke godt".</p>
+  </div>
+
+  <p>Da jeg rettede queries til at beskrive <em>hvad der faktisk var i klippene</em>, faldt tingene på plads:</p>
+
+  <div class="compare">
+    <div class="compare-row header">
+      <div class="compare-cell">Query</div>
+      <div class="compare-cell">Top-1 klip</div>
+      <div class="compare-cell">Score &amp; match</div>
+    </div>
+    <div class="compare-row">
+      <div class="compare-cell label"><code>a waterfall in a tropical jungle</code></div>
+      <div class="compare-cell">KAM10073</div>
+      <div class="compare-cell hit">0,317 ✓ vandfald</div>
+    </div>
+    <div class="compare-row">
+      <div class="compare-cell label"><code>a spider on its web</code></div>
+      <div class="compare-cell">KAM10066</div>
+      <div class="compare-cell hit">0,320 ✓ <a href="02_spider_good.html" target="_blank">edderkop</a></div>
+    </div>
+    <div class="compare-row">
+      <div class="compare-cell label"><code>a market stall with baskets of fruit</code></div>
+      <div class="compare-cell">KAM10090</div>
+      <div class="compare-cell hit">0,347 ✓ <a href="03_market_good.html" target="_blank">frugtmarked</a></div>
+    </div>
+    <div class="compare-row">
+      <div class="compare-cell label"><code>dense green jungle canopy</code></div>
+      <div class="compare-cell">KAM10070</div>
+      <div class="compare-cell hit">✓ jungle op mod himlen</div>
+    </div>
+  </div>
+
+  <div class="card note">
+    <div class="card-label">Se eksemplerne</div>
+    <p>Klik på <a href="02_spider_good.html" target="_blank">edderkop</a> eller <a href="03_market_good.html" target="_blank">frugtmarked</a> ovenfor for at se de faktiske frames og søgeresultater. Eksemplerne viser thumbnails af top-10 matches, scores, og hvordan en god query ser ud kontra en dårlig.</p>
+  </div>
+
+  <div class="insight">
+    Når resultater ser skæve ud — spørg først <em>"er indholdet overhovedet i klippene?"</em>, ikke <em>"virker modellen?"</em>
+    <cite>— Lektion</cite>
+  </div>
+
+  <div class="card warning">
+    <div class="card-label">Kontrast: de dårlige eksempler</div>
+    <p>Til sammenligning returnerede queries som <code>grilled meat on a plate</code>, <code>hands preparing ingredients</code> og <code>a close-up of a plate of food</code> også noget — men det var åbenlyst mismatch fordi indholdet ikke findes i klippene. Modellen rangerede stadig, men scorede lavt og ramte tilfældigt.</p>
+  </div>
+
+  <p>Det lyder banalt. Det er det ikke. For når jeg som editor bruger appen i fremtiden, har jeg ofte en <em>ide</em> om hvad der ligger i rushes — men ikke altid ret. Programmets tema, historien vi fortæller, det mentale billede jeg har — intet af det er i embeddingen. Modellen ser kun hvad kameraet fangede.</p>
+
+  <div class="nudge">
+    <div class="nudge-icon">→</div>
+    <div class="nudge-body">
+      <strong>Praktisk konsekvens</strong>
+      Før du starter en målrettet søgning på et ukendt datasæt, så kør et par <em>eksplorative queries</em> først. Ting som <code>outdoor scene</code>, <code>person</code>, <code>close-up</code>. De fortæller dig hvad der faktisk ligger i rushes. Derefter kan du stille de skarpe spørgsmål.
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ 13. SCORE-KALIBRERING ═══════════════ -->
+<section id="praksis-scores">
+  <span class="section-num">13 — Finding #3</span>
+  <h2>Score-<em>kalibrering</em></h2>
+
+  <p>Cosine similarity giver altid et tal mellem -1 og 1. Men i praksis, på CLIP-lignende modeller, bevæger scores sig i et smallere bånd — typisk 0,10 til 0,40 for CLIP-familien. Her er den kalibrering jeg udledte fra Bali-datasættet:</p>
+
+  <div class="score-ladder">
+    <div class="score-row strong">
+      <div class="score-range strong">0,32 +</div>
+      <div class="score-desc">
+        <strong>Stærk match</strong>
+        Top-1-klippet er næsten altid korrekt. Hvis scoren er her, så stoler på resultatet. Tag top-5 og vælg det bedste shot.
+      </div>
+    </div>
+    <div class="score-row ok">
+      <div class="score-range ok">0,28 – 0,32</div>
+      <div class="score-desc">
+        <strong>Brugbar match</strong>
+        Relevant, men sjældent det bedst mulige. Top-1 er ofte korrekt kategori men ikke optimalt shot. Scan top-10.
+      </div>
+    </div>
+    <div class="score-row weak">
+      <div class="score-range weak">0,20 – 0,28</div>
+      <div class="score-desc">
+        <strong>Delvist relevant</strong>
+        Samme mood, farver, kontekst — men ofte ikke motivet du søgte. Forbedr din query, eller accepter at du skimmer manuelt.
+      </div>
+    </div>
+    <div class="score-row noise">
+      <div class="score-range noise">&lt; 0,20</div>
+      <div class="score-desc">
+        <strong>Støj</strong>
+        Modellen rangerer noget fordi du bad den — men intet er tæt på. Enten findes indholdet ikke i datasættet (se finding #1), eller din query er for abstrakt.
+      </div>
+    </div>
+  </div>
+
+  <div class="card note">
+    <div class="card-label">Vigtigt forbehold</div>
+    <p>Kalibreringen er <strong>dataset-afhængig</strong>. Et datasæt med ren natur giver andre typiske scores end et med mange mennesker i interiør. De <em>relative afstande</em> er dog konsistente: top-5 ligger altid tæt, støj ligger altid langt væk. Brug tallene som vejledning, ikke som absolut sandhed.</p>
+  </div>
+
+  <details class="deep-dive">
+    <summary>Dyk dybere: Hvorfor ikke scores tæt på 1,0?</summary>
+    <div class="deep-content">
+      <p>I ren matematik giver to identiske L2-normaliserede vektorer cosine similarity = 1,0. Men CLIP-modeller placerer aldrig billeder og tekst på <em>samme</em> punkt — kun i samme <em>rum</em>. Der er altid en "modality gap": billed-vektorer klumper sig i ét område, tekst-vektorer i et andet. Selv perfekte matches ligger typisk ved 0,30–0,40.</p>
+      <p>Det betyder også at <strong>scores ikke kan sammenlignes direkte på tværs af modeller</strong>. MobileCLIP 2-S4 kan score 0,32 hvor SigLIP-SO400M scorer 0,28 for samme match — det er ikke fordi den ene er bedre. Det er fordi deres interne "temperatur" er forskellig. Sammenlign kun scores inden for samme model.</p>
+    </div>
+  </details>
+</section>
+
+<!-- ═══════════════ 14. ENKELTORD VS. SÆTNINGER ═══════════════ -->
+<section id="praksis-queries">
+  <span class="section-num">14 — Finding #2</span>
+  <h2>Enkeltord <em>vs.</em> sætninger</h2>
+
+  <p>Det er fristende at skrive lange beskrivende queries, som om modellen var Google. Men CLIP-familien blev trænet på korte billedtekster — så korte queries er ofte mindst lige så gode. Jeg testede fire varianter per objekt på samme 1.194 frames.</p>
+
+  <div class="query-table">
+    <div class="qt-title">🕷️ Edderkop — alle varianter ramte samme klip (KAM10066)</div>
+    <div class="qt-row head">
+      <div class="qt-cell">Query</div>
+      <div class="qt-cell score">Top-1 score</div>
+      <div class="qt-cell clip">Top-1 klip</div>
+    </div>
+    <div class="qt-row">
+      <div class="qt-cell query"><code>spider</code></div>
+      <div class="qt-cell score">0,307</div>
+      <div class="qt-cell clip hit">KAM10066 ✓</div>
+    </div>
+    <div class="qt-row">
+      <div class="qt-cell query"><code>a spider</code></div>
+      <div class="qt-cell score best">0,318</div>
+      <div class="qt-cell clip hit">KAM10066 ✓</div>
+    </div>
+    <div class="qt-row">
+      <div class="qt-cell query"><code>a photo of a spider</code></div>
+      <div class="qt-cell score">0,314</div>
+      <div class="qt-cell clip hit">KAM10066 ✓</div>
+    </div>
+    <div class="qt-row">
+      <div class="qt-cell query"><code>a spider on its web</code></div>
+      <div class="qt-cell score best">0,320</div>
+      <div class="qt-cell clip hit">KAM10066 ✓</div>
+    </div>
+  </div>
+
+  <div class="query-table">
+    <div class="qt-title">🥭 Marked — varianter ramte forskellige klip</div>
+    <div class="qt-row head">
+      <div class="qt-cell">Query</div>
+      <div class="qt-cell score">Top-1 score</div>
+      <div class="qt-cell clip">Top-1 klip</div>
+    </div>
+    <div class="qt-row">
+      <div class="qt-cell query"><code>market</code></div>
+      <div class="qt-cell score">0,321</div>
+      <div class="qt-cell clip hit">KAM10090 ✓</div>
+    </div>
+    <div class="qt-row">
+      <div class="qt-cell query"><code>a market</code></div>
+      <div class="qt-cell score">0,321</div>
+      <div class="qt-cell clip miss">KAM10088 (andet klip)</div>
+    </div>
+    <div class="qt-row">
+      <div class="qt-cell query"><code>fruit market</code></div>
+      <div class="qt-cell score">0,328</div>
+      <div class="qt-cell clip hit">KAM10090 ✓</div>
+    </div>
+    <div class="qt-row">
+      <div class="qt-cell query"><code>a market stall with baskets of fruit</code></div>
+      <div class="qt-cell score best">0,347</div>
+      <div class="qt-cell clip hit">KAM10090 ✓</div>
+    </div>
+  </div>
+
+  <h3>Hvad det betyder</h3>
+
+  <ul>
+    <li><strong>Enkeltord virker fint</strong> for tydelige objekter. Du rammer typisk samme klip med <code>spider</code> som med <code>a spider on its web</code>.</li>
+    <li><strong>Artiklen "a" giver +0,01</strong> i score men flytter sjældent rangeringen. Det er kosmetisk.</li>
+    <li><strong>Lange beskrivende sætninger <em>bøjer</em> resultatet.</strong> "A market stall with baskets of fruit" prioriterer <em>marked-med-frugtkurve</em> frem for bare marked. Det kan være nyttigt — eller overspecificering.</li>
+    <li><strong>"a photo of a X" er ikke din ven.</strong> Det klassiske OpenAI CLIP prompt template-trick hjælper ikke konsistent med MobileCLIP 2. Spring det over.</li>
+  </ul>
+
+  <div class="insight">
+    Brug enkeltord for overblik. Brug kontekst kun når du vil tvinge en bestemt kuratur frem — ikke bare for scores.
+    <cite>— Praktisk regel</cite>
+  </div>
+</section>
+
+<!-- ═══════════════ 15. STYRKER OG SVAGHEDER ═══════════════ -->
+<section id="praksis-styrker">
+  <span class="section-num">15 — Finding #5</span>
+  <h2>Hvor modellen er <em>stærk</em> — og hvor den er svag</h2>
+
+  <p>Efter ~50 queries kom der et tydeligt mønster frem. Modellen er næsten altid god til det samme og næsten altid dårlig til det samme. Det er værd at kende, så du ved hvad du kan bede om og hvad der er spild.</p>
+
+  <h3>Hvad modellen er god til</h3>
+
+  <div class="card success">
+    <div class="card-label">Stærke kategorier</div>
+    <p>Testet empirisk på Bali-datasættet. Virker som regel med scores over 0,30 hvis indholdet findes i datasættet:</p>
+    <ul>
+      <li><strong>Konkrete objekter og dyr</strong> — <code>spider</code>, <code>palm tree</code>, <code>basket of fruit</code>, <code>car</code></li>
+      <li><strong>Miljøer og landskaber</strong> — <code>jungle</code>, <code>waterfall</code>, <code>market</code>, <code>beach</code>, <code>rice field</code></li>
+      <li><strong>Kompositions-typer</strong> — <code>close-up</code>, <code>wide shot</code>, <code>establishing shot</code>, <code>overhead shot</code></li>
+      <li><strong>Farver og lys</strong> — <code>golden hour</code>, <code>blue tones</code>, <code>high contrast</code>, <code>low light</code></li>
+      <li><strong>Specifikke frugter og mad</strong> — modellen genkender dragefrugt, rambutan, osv. Imponerende detail-niveau.</li>
+    </ul>
+  </div>
+
+  <h3>Hvor modellen er dårligere</h3>
+
+  <div class="card warning">
+    <div class="card-label">Svage kategorier</div>
+    <p>Rangerer noget men pålideligheden er lav. Undgå disse eller brug dem med forsigtighed:</p>
+    <ul>
+      <li><strong>Handlinger uden tydelige visuelle markører</strong> — <code>waiting</code>, <code>listening</code>, <code>contemplating</code></li>
+      <li><strong>Følelser</strong> — <code>someone happy</code>, <code>sad person</code>. Den fanger overdrevne udtryk, ikke subtile.</li>
+      <li><strong>Abstrakte begreber</strong> — <code>tension</code>, <code>warmth</code>, <code>authenticity</code>. Ord der kræver kontekst eller fortolkning.</li>
+      <li><strong>Tekst i billeder</strong> — den ser skilte som <em>grafiske elementer</em>, læser dem ikke.</li>
+      <li><strong>Fingerede detaljer</strong> — <code>a red Toyota from 1985</code>. Racen/model/år er for finkornet. Den vil give dig en rød bil, men ikke nødvendigvis en Toyota, og næsten sikkert ikke årgangen.</li>
+    </ul>
+  </div>
+
+  <div class="nudge">
+    <div class="nudge-icon">→</div>
+    <div class="nudge-body">
+      <strong>I praksis</strong>
+      Hvis din første query fejler, så spørg: <em>beder jeg modellen om noget den kan se, eller noget den skal fortolke?</em> Omform til noget visuelt. I stedet for <code>someone feeling stressed</code> → prøv <code>hands clenched</code>, <code>furrowed brow</code>, <code>tense posture</code>. Du bliver bedre til at se som kameraet ser.
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ 16. ARBEJDSGANG ═══════════════ -->
+<section id="praksis-workflow">
+  <span class="section-num">16 — Ny praksis</span>
+  <h2>Den <em>arbejdsgang</em> der virker</h2>
+
+  <p>Kombineret giver findings ovenfor en konkret tre-trins-proces for at søge i et nyt datasæt. Det er ikke akademi — det er det jeg vil bygge ind i VisualScanner-UI'et på sigt, så editors falder ned i det af sig selv.</p>
+
+  <div class="diagram">
+    <svg viewBox="0 0 700 220" xmlns="http://www.w3.org/2000/svg">
+      <!-- Step 1 -->
+      <rect x="20" y="60" width="180" height="100" rx="6" fill="#221e19" stroke="#c87642" stroke-width="1.5"/>
+      <text x="110" y="85" font-family="JetBrains Mono" font-size="10" fill="#c87642" text-anchor="middle" letter-spacing="1">TRIN 01</text>
+      <text x="110" y="110" font-family="Fraunces" font-size="14" fill="#ebe5da" text-anchor="middle" font-style="italic">Eksplorer</text>
+      <text x="110" y="128" font-family="Newsreader" font-size="11" fill="#a89f93" text-anchor="middle">Hvad er der</text>
+      <text x="110" y="144" font-family="Newsreader" font-size="11" fill="#a89f93" text-anchor="middle">overhovedet?</text>
+
+      <!-- Arrow -->
+      <line x1="208" y1="110" x2="248" y2="110" stroke="#8a4f2a" stroke-width="1.5"/>
+      <polygon points="248,110 240,106 240,114" fill="#8a4f2a"/>
+
+      <!-- Step 2 -->
+      <rect x="260" y="60" width="180" height="100" rx="6" fill="#221e19" stroke="#c87642" stroke-width="1.5"/>
+      <text x="350" y="85" font-family="JetBrains Mono" font-size="10" fill="#c87642" text-anchor="middle" letter-spacing="1">TRIN 02</text>
+      <text x="350" y="110" font-family="Fraunces" font-size="14" fill="#ebe5da" text-anchor="middle" font-style="italic">Målret</text>
+      <text x="350" y="128" font-family="Newsreader" font-size="11" fill="#a89f93" text-anchor="middle">Præcise queries</text>
+      <text x="350" y="144" font-family="Newsreader" font-size="11" fill="#a89f93" text-anchor="middle">på kendt indhold</text>
+
+      <!-- Arrow -->
+      <line x1="448" y1="110" x2="488" y2="110" stroke="#8a4f2a" stroke-width="1.5"/>
+      <polygon points="488,110 480,106 480,114" fill="#8a4f2a"/>
+
+      <!-- Step 3 -->
+      <rect x="500" y="60" width="180" height="100" rx="6" fill="#221e19" stroke="#c87642" stroke-width="1.5"/>
+      <text x="590" y="85" font-family="JetBrains Mono" font-size="10" fill="#c87642" text-anchor="middle" letter-spacing="1">TRIN 03</text>
+      <text x="590" y="110" font-family="Fraunces" font-size="14" fill="#ebe5da" text-anchor="middle" font-style="italic">Eksperimentér</text>
+      <text x="590" y="128" font-family="Newsreader" font-size="11" fill="#a89f93" text-anchor="middle">Varianter når</text>
+      <text x="590" y="144" font-family="Newsreader" font-size="11" fill="#a89f93" text-anchor="middle">det tæller</text>
+    </svg>
+    <div class="diagram-caption">Fig. 2 — Tre-trins søgeflow for et nyt datasæt</div>
+  </div>
+
+  <h3>Trin 01 — eksplorer først</h3>
+
+  <p>Når du ikke ved hvad der er i klippene (og det ved du ofte ikke), så start bredt. Et håndfuld brede queries tegner et kort over indholdet.</p>
+
+  <pre><code># Hvad slags scener er der?
+query: "outdoor scene"      k=10
+query: "indoor scene"       k=10
+query: "person"             k=10
+query: "close-up"           k=10</code></pre>
+
+  <p>Kig på top-5 i hver. Nu ved du om datasættet er natur, interview, maddage, action — eller en blanding.</p>
+
+  <h3>Trin 02 — målret</h3>
+
+  <p>Med det billede i hovedet, stil de skarpe spørgsmål. Enkeltord først. Læs finding #2 igen: du behøver ikke skrive sætninger.</p>
+
+  <pre><code># Nu ved jeg det er natur-B-roll
+query: "waterfall"          k=20
+query: "market with vendors" k=20
+query: "spider"             k=20</code></pre>
+
+  <h3>Trin 03 — eksperimentér når det tæller</h3>
+
+  <p>Hvis et specifikt shot skal findes — til en trailer, en teaser, et bestemt øjeblik — så kør flere varianter og sammenlign top-5. Den lange query kan ændre hvilket klip der vinder top-1. Det er <em>kuratur</em>, ikke bedre søgning.</p>
+
+  <pre><code># Jeg leder efter et særligt shot af edderkop
+query: "spider"                                k=10
+query: "large spider on a web in jungle"       k=10
+# Sammenlign top-5 og vælg det der bedst matcher
+# det visuelle jeg har i hovedet</code></pre>
+
+  <div class="decision">
+    <dt>Intern praksis</dt>
+    <dd>
+      <strong>Tre-trins-søgning er default</strong>
+      For alle VisualScanner-søgninger på ukendt materiale: start bredt, indsnævr, varier. Skal bygges ind i VisualScanner-UI'et som en default "wizard"-tilstand for nye brugere — og som den hurtige workflow for erfarne.
+    </dd>
+  </div>
+</section>
+
+<!-- ═══════════════ 17. FREMTIDEN ═══════════════ -->
 <section id="fremtiden">
-  <span class="section-num">10 — Den næste sten</span>
+  <span class="section-num">17 — Den næste sten</span>
   <h2>Vidensbank til <em>Dashboard</em></h2>
 
   <p class="lead">Den her HTML er prototypen. Det egentlige mål er at samme princip bygges ind i Dashboard-appen, så al teknisk viden om vores værktøjer og workflows kan tilgås ét sted.</p>
@@ -1375,9 +1923,9 @@ details.deep-dive .deep-content p:last-child { margin-bottom: 0; }
   </div>
 </section>
 
-<!-- ═══════════════ 11. ORDBOG ═══════════════ -->
+<!-- ═══════════════ 18. ORDBOG ═══════════════ -->
 <section id="ordbog">
-  <span class="section-num">11 — Reference</span>
+  <span class="section-num">18 — Reference</span>
   <h2>Ordbog</h2>
 
   <p class="lead">Termer fra denne vidensbank. Klik på et orange ord i teksten ovenfor for at hoppe direkte hertil.</p>
@@ -1459,12 +2007,27 @@ details.deep-dive .deep-content p:last-child { margin-bottom: 0; }
       <div class="glossary-def">Universel kommandolinje-værktøj til at læse, konvertere og bearbejde video og lyd. VisualScanner bruger det til at pakke videoer ud i enkelt-frames før scanning. Installeres typisk via Homebrew (<code>brew install ffmpeg</code>).</div>
     </div>
 
+    <div class="glossary-item" id="b-roll">
+      <div class="glossary-term">B-roll</div>
+      <div class="glossary-def">Supplerende optagelser der klippes ind over interviews eller fortælling — natur, objekter, etableringsshots, stemningsbilleder. Modsat A-roll som er den primære fortælle-linje. Test-materialet fra Bali var næsten udelukkende B-roll.</div>
+    </div>
+
+    <div class="glossary-item" id="modality-gap">
+      <div class="glossary-term">Modality gap</div>
+      <div class="glossary-def">Fænomen hvor billed-vektorer og tekst-vektorer i CLIP klumper sig i hver sit område af det fælles rum, selv efter normalisering. Det er grunden til at selv perfekte matches sjældent scorer over 0,40 — der er altid en afstand at slå bro over.</div>
+    </div>
+
+    <div class="glossary-item" id="top-k">
+      <div class="glossary-term">Top-k</div>
+      <div class="glossary-def">De k højst-rangerede resultater fra en søgning. <code>k=10</code> betyder "giv mig de 10 bedste matches". Brug <code>k=5</code> for at se toppen af din søgning, <code>k=20</code> hvis du vil scanne bredere før du vælger.</div>
+    </div>
+
   </div>
 </section>
 
-<!-- ═══════════════ 12. VIDERE LÆSNING ═══════════════ -->
+<!-- ═══════════════ 19. VIDERE LÆSNING ═══════════════ -->
 <section id="videre">
-  <span class="section-num">12 — Reference</span>
+  <span class="section-num">19 — Reference</span>
   <h2>Videre <em>læsning</em></h2>
 
   <p class="lead">Hvis du vil dybere ned i emnet, er det her de bedste startsteder. Sorteret efter teknisk niveau.</p>
@@ -1522,8 +2085,8 @@ details.deep-dive .deep-content p:last-child { margin-bottom: 0; }
   </div>
 
   <div class="colophon">
-    <p>Vidensbank v 1.0 · Genereret april 2026</p>
-    <p>Bygget som prototype for integration i Dashboard-appen.</p>
+    <p>Vidensbank v 1.1 · Opdateret april 2026</p>
+    <p>Kombinerer teori om visuelle embeddings med hands-on findings fra første test af MobileCLIP 2-S4.</p>
     <p>Beregnet til intern brug · Metronome / Nordisk Film TV · Post-production</p>
   </div>
 
