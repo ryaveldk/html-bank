@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HTML_bank — Ryan Velin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,300;1,9..144,400&family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;1,6..72,300;1,6..72,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #15120f;
+  --bg-elevated: #1b1814;
+  --bg-card: #221e19;
+  --bg-card-hover: #2a2520;
+  --text: #ebe5da;
+  --text-muted: #a89f93;
+  --text-dim: #6b6358;
+  --accent: #c87642;
+  --accent-bright: #e08a52;
+  --accent-dim: #8a4f2a;
+  --line: #2d2823;
+  --line-strong: #3d3832;
+  --highlight: #f4d3a3;
+  --display: "Fraunces", Georgia, serif;
+  --body: "Newsreader", Georgia, serif;
+  --mono: "JetBrains Mono", "SF Mono", monospace;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--body);
+  font-size: 18px;
+  line-height: 1.65;
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+main {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 6rem 3rem 4rem 3rem;
+  flex-grow: 1;
+  width: 100%;
+}
+
+/* HEADER */
+header {
+  margin-bottom: 5rem;
+  padding-bottom: 3rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 1.5rem;
+}
+
+h1 {
+  font-family: var(--display);
+  font-weight: 300;
+  font-size: clamp(3rem, 7vw, 5rem);
+  line-height: 1;
+  letter-spacing: -0.025em;
+  margin-bottom: 1.5rem;
+  color: var(--text);
+}
+
+h1 em {
+  font-style: italic;
+  color: var(--accent);
+  font-weight: 400;
+}
+
+.lead {
+  font-size: 1.25rem;
+  line-height: 1.55;
+  color: var(--text-muted);
+  font-weight: 300;
+  max-width: 620px;
+}
+
+.meta {
+  display: flex;
+  gap: 2.5rem;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  margin-top: 2.5rem;
+}
+
+.meta strong {
+  display: block;
+  color: var(--text-muted);
+  font-weight: 500;
+  font-size: 0.85rem;
+  margin-top: 0.3rem;
+  letter-spacing: 0.05em;
+}
+
+/* SECTION TITLES */
+.section-title {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--line);
+}
+
+section {
+  margin-bottom: 5rem;
+}
+
+/* CHAPTER CARDS */
+.chapters {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.chapter {
+  display: block;
+  padding: 2rem 2.2rem;
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.25s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.chapter::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--accent-dim);
+  transition: all 0.25s ease;
+}
+
+.chapter:hover {
+  background: var(--bg-card-hover);
+  transform: translateX(4px);
+  border-color: var(--accent-dim);
+}
+
+.chapter:hover::before {
+  background: var(--accent);
+  width: 4px;
+}
+
+.chapter-meta {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.8rem;
+}
+
+.chapter-num {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border: 1px solid var(--accent-dim);
+  border-radius: 3px;
+  color: var(--accent);
+}
+
+.chapter-time {
+  color: var(--text-dim);
+  letter-spacing: 0.12em;
+}
+
+.chapter-title {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 1.8rem;
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+  margin-bottom: 0.7rem;
+  color: var(--text);
+}
+
+.chapter-title em {
+  font-style: italic;
+  color: var(--accent-bright);
+}
+
+.chapter-desc {
+  color: var(--text-muted);
+  font-size: 0.98rem;
+  line-height: 1.55;
+  margin-bottom: 1rem;
+}
+
+.chapter-tags {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+.tag {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  padding: 0.3rem 0.6rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+}
+
+.chapter-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1.2rem;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--accent-bright);
+}
+
+.chapter-cta::after {
+  content: "→";
+  font-family: var(--display);
+  font-style: italic;
+  font-size: 1rem;
+  transition: transform 0.2s ease;
+}
+
+.chapter:hover .chapter-cta::after {
+  transform: translateX(3px);
+}
+
+/* UTILITY LINKS */
+.utility-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.utility {
+  display: block;
+  padding: 1.2rem 1.4rem;
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.2s ease;
+}
+
+.utility:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--accent-dim);
+}
+
+.utility-label {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.4rem;
+}
+
+.utility-title {
+  font-family: var(--display);
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 0.3rem;
+}
+
+.utility-desc {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+/* COMING SOON */
+.coming-soon {
+  padding: 1.8rem 2rem;
+  background: var(--bg-elevated);
+  border: 1px dashed var(--line-strong);
+  border-radius: 6px;
+  text-align: center;
+}
+
+.coming-soon-label {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 0.5rem;
+}
+
+.coming-soon-text {
+  font-family: var(--display);
+  font-style: italic;
+  font-size: 1.1rem;
+  color: var(--text-muted);
+}
+
+/* FOOTER */
+footer {
+  margin-top: auto;
+  padding: 3rem;
+  border-top: 1px solid var(--line);
+  background: var(--bg-elevated);
+}
+
+.footer-inner {
+  max-width: 920px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  letter-spacing: 0.1em;
+}
+
+.footer-inner em {
+  font-family: var(--display);
+  font-style: italic;
+  color: var(--accent);
+  letter-spacing: -0.01em;
+}
+
+@media (max-width: 700px) {
+  main { padding: 3rem 1.5rem; }
+  h1 { font-size: 2.5rem; }
+  .chapter { padding: 1.5rem 1.6rem; }
+  .chapter-title { font-size: 1.4rem; }
+  .meta { flex-wrap: wrap; gap: 1.5rem; }
+  .footer-inner { flex-direction: column; gap: 1rem; text-align: center; }
+}
+</style>
+</head>
+<body>
+
+<main>
+
+<header>
+  <div class="eyebrow">Ryan Velin · Personal knowledge base</div>
+  <h1>HTML <em>bank.</em></h1>
+  <p class="lead">Min personlige vidensbank — tekniske dybdedykk og beslutningsdokumentation. Bygges ud løbende, kapitel for kapitel.</p>
+
+  <div class="meta">
+    <span>Kapitler<strong>2 publiceret</strong></span>
+    <span>Sidst opdateret<strong>April 2026</strong></span>
+    <span>Format<strong>HTML · læs i browser</strong></span>
+  </div>
+</header>
+
+<section>
+  <div class="section-title">Kapitler</div>
+
+  <div class="chapters">
+
+    <a href="vidensbank.html" class="chapter">
+      <div class="chapter-meta">
+        <span class="chapter-num">01</span>
+        <span class="chapter-time">~ 25 min læsetid</span>
+      </div>
+      <div class="chapter-title">Visuelle embeddings &amp; <em>VisualScanner</em></div>
+      <div class="chapter-desc">Hvordan computere "ser" video og finder det de leder efter. Guide til CLIP, embeddings, vektorer, cosine similarity, og beslutningen om at skifte VisualScanner over på Apples MobileCLIP 2.</div>
+      <div class="chapter-tags">
+        <span class="tag">CLIP</span>
+        <span class="tag">MobileCLIP</span>
+        <span class="tag">Apple Silicon</span>
+        <span class="tag">CoreML</span>
+        <span class="tag">FCP</span>
+      </div>
+      <div class="chapter-cta">Læs kapitlet</div>
+    </a>
+
+    <a href="vidensbank-02-rag.html" class="chapter">
+      <div class="chapter-meta">
+        <span class="chapter-num">02</span>
+        <span class="chapter-time">~ 30 min læsetid</span>
+      </div>
+      <div class="chapter-title">RAG &amp; <em>token-økonomi</em></div>
+      <div class="chapter-desc">Hvordan LLM'er navigerer i tekst de aldrig har læst. Tokens, context windows, RAG-arkitektur, chunking, vector databases, og hvordan vidensbanken bliver søgbar i Dashboard på sigt.</div>
+      <div class="chapter-tags">
+        <span class="tag">RAG</span>
+        <span class="tag">Tokens</span>
+        <span class="tag">Embeddings</span>
+        <span class="tag">Vector DB</span>
+        <span class="tag">InterviewNavigator</span>
+      </div>
+      <div class="chapter-cta">Læs kapitlet</div>
+    </a>
+
+    <div class="coming-soon">
+      <div class="coming-soon-label">Kapitel 03</div>
+      <div class="coming-soon-text">Kommer snart — emnet er ikke valgt endnu</div>
+    </div>
+
+  </div>
+</section>
+
+<section>
+  <div class="section-title">Værktøjer &amp; guides</div>
+
+  <div class="utility-grid">
+
+    <a href="setup-github-pages.html" class="utility">
+      <div class="utility-label">Setup</div>
+      <div class="utility-title">GitHub Pages opsætning</div>
+      <div class="utility-desc">Step-by-step guide til at lægge HTML-filer på GitHub Pages. 100% klik-baseret, ingen terminal.</div>
+    </a>
+
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="footer-inner">
+    <div>HTML <em>bank.</em> · v 1.0 · April 2026</div>
+    <div>Internal · Metronome / Nordisk Film TV</div>
+  </div>
+</footer>
+
+</body>
+</html>
