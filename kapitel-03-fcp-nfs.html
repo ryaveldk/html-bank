@@ -1,0 +1,1655 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kapitel 01 — Visuelle embeddings &amp; VisualScanner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #0a0a0a;
+    --ink-2: #262626;
+    --ink-3: #525252;
+    --ink-4: #a3a3a3;
+    --line: #ededed;
+    --line-2: #f5f5f5;
+    --bg: #ffffff;
+    --tint: #fafafa;
+    --signal: #0ea5e9;
+    --paper-bg: #f0f0ee;
+
+    --info-bg: #f0f9ff;
+    --info-border: #bae6fd;
+    --info-ink: #0c4a6e;
+
+    --warn-bg: #fffbeb;
+    --warn-border: #fde68a;
+    --warn-ink: #78350f;
+
+    --ok-bg: #f0fdf4;
+    --ok-border: #bbf7d0;
+    --ok-ink: #14532d;
+
+    --code-bg: #fafafa;
+    --code-border: #ededed;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; scroll-padding-top: 24px; }
+
+  body {
+    background: var(--paper-bg);
+    color: var(--ink);
+    font-family: 'Geist', -apple-system, sans-serif;
+    font-weight: 400;
+    -webkit-font-smoothing: antialiased;
+    font-feature-settings: 'ss01', 'cv11';
+    min-height: 100vh;
+  }
+
+  .mono { font-family: 'Geist Mono', ui-monospace, monospace; }
+
+  /* PROGRESS */
+  #progress {
+    position: fixed; top: 0; left: 0;
+    height: 2px; background: var(--ink);
+    z-index: 1000; width: 0;
+    transition: width 0.1s ease-out;
+  }
+
+  /* SHEET */
+  .sheet {
+    max-width: 1120px;
+    margin: 32px auto;
+    background: var(--bg);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 10px 40px rgba(0,0,0,0.06);
+    position: relative;
+  }
+
+  /* TOPBAR */
+  .topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 48px;
+    border-bottom: 1px solid var(--line);
+    font-size: 10px;
+    letter-spacing: 0.02em;
+  }
+  .topbar-left { display: flex; align-items: center; gap: 10px; color: var(--ink-3); }
+  .logo-dot {
+    width: 8px; height: 8px;
+    background: var(--ink); border-radius: 50%;
+    position: relative;
+  }
+  .logo-dot::after {
+    content: ''; position: absolute; inset: -3px;
+    border: 1px solid var(--ink); border-radius: 50%;
+    opacity: 0.2;
+  }
+  .topbar-right a {
+    color: var(--ink-3); text-decoration: none;
+    font-family: 'Geist Mono', monospace; font-size: 10px;
+    transition: color 0.15s;
+  }
+  .topbar-right a:hover { color: var(--ink); }
+
+  /* LAYOUT */
+  .layout {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+  }
+
+  /* TOC */
+  .toc {
+    position: sticky;
+    top: 0;
+    align-self: start;
+    height: 100vh;
+    overflow-y: auto;
+    padding: 48px 20px 40px 48px;
+    border-right: 1px solid var(--line);
+  }
+  .toc::-webkit-scrollbar { width: 4px; }
+  .toc::-webkit-scrollbar-thumb { background: var(--line); border-radius: 2px; }
+
+  .toc-label {
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px; font-weight: 500;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--ink-4); margin-bottom: 18px;
+  }
+
+  .toc ol { list-style: none; counter-reset: toc; }
+  .toc li { counter-increment: toc; }
+
+  .toc a {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 5px 10px 5px 10px;
+    margin-left: -10px;
+    font-size: 12.5px;
+    line-height: 1.35;
+    color: var(--ink-3);
+    text-decoration: none;
+    transition: color 0.15s;
+    border-left: 2px solid transparent;
+  }
+  .toc a::before {
+    content: counter(toc, decimal-leading-zero);
+    font-family: 'Geist Mono', monospace;
+    font-size: 9.5px;
+    color: var(--ink-4);
+    flex-shrink: 0;
+    padding-top: 1px;
+  }
+  .toc a:hover { color: var(--ink); }
+  .toc a.active {
+    color: var(--ink);
+    border-left-color: var(--ink);
+  }
+
+  /* MAIN */
+  main {
+    padding: 48px 64px 64px 64px;
+    max-width: 760px;
+  }
+
+  /* HERO */
+  .chapter-hero {
+    padding-bottom: 40px;
+    margin-bottom: 40px;
+    border-bottom: 1px solid var(--line);
+  }
+  .chapter-hero-meta {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 28px;
+  }
+  .chapter-badge {
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px; font-weight: 500;
+    letter-spacing: 0.04em; text-transform: uppercase;
+    color: var(--ink-3);
+    padding: 5px 9px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+  }
+  .chapter-time {
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px; color: var(--ink-4);
+    letter-spacing: 0.02em;
+  }
+  h1 {
+    font-family: 'Geist', sans-serif;
+    font-weight: 500; font-size: 42px;
+    line-height: 1.05;
+    letter-spacing: -0.035em;
+    color: var(--ink); margin-bottom: 20px;
+  }
+  h1 .dim { color: var(--ink-4); font-weight: 400; }
+  .chapter-lede {
+    font-size: 17px; line-height: 1.55;
+    color: var(--ink-2);
+    letter-spacing: -0.01em;
+  }
+  .hero-meta-row {
+    display: flex; gap: 32px; margin-top: 28px; flex-wrap: wrap;
+  }
+  .hero-meta-item {
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px; color: var(--ink-4);
+    text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .hero-meta-item strong {
+    display: block;
+    font-family: 'Geist', sans-serif;
+    font-size: 13px; color: var(--ink);
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: -0.01em;
+    margin-top: 4px;
+  }
+
+  /* SECTION DIVIDERS */
+  .divider {
+    display: flex; align-items: center; gap: 12px;
+    margin: 56px 0 24px 0;
+  }
+  .divider:first-child { margin-top: 0; }
+  .divider-num {
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px; color: var(--ink-4);
+  }
+  .divider-label {
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px; font-weight: 500;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--ink-3); white-space: nowrap;
+  }
+  .divider-line { flex: 1; height: 1px; background: var(--line); }
+
+  /* TYPOGRAPHY */
+  h2 {
+    font-family: 'Geist', sans-serif;
+    font-weight: 500; font-size: 26px;
+    line-height: 1.2;
+    letter-spacing: -0.025em;
+    color: var(--ink);
+    margin: 0 0 18px 0;
+    scroll-margin-top: 24px;
+  }
+  h3 {
+    font-family: 'Geist', sans-serif;
+    font-weight: 500; font-size: 17px;
+    line-height: 1.3;
+    letter-spacing: -0.015em;
+    color: var(--ink);
+    margin: 32px 0 12px 0;
+  }
+  h4 {
+    font-family: 'Geist Mono', monospace;
+    font-weight: 500; font-size: 11px;
+    letter-spacing: 0.05em; text-transform: uppercase;
+    color: var(--ink-3);
+    margin: 28px 0 10px 0;
+  }
+
+  main p {
+    font-size: 15px; line-height: 1.7;
+    color: var(--ink-2);
+    letter-spacing: -0.005em;
+    margin-bottom: 16px;
+  }
+  main p strong { color: var(--ink); font-weight: 500; }
+  main p em { font-style: italic; color: var(--ink); }
+
+  main p.lead {
+    font-size: 17px;
+    color: var(--ink);
+    margin-bottom: 22px;
+  }
+
+  main a {
+    color: var(--ink);
+    text-decoration: underline;
+    text-decoration-color: var(--ink-4);
+    text-underline-offset: 3px;
+    transition: text-decoration-color 0.15s;
+  }
+  main a:hover { text-decoration-color: var(--ink); }
+
+  main code {
+    font-family: 'Geist Mono', monospace;
+    font-size: 13px;
+    padding: 2px 6px;
+    background: var(--code-bg);
+    border: 1px solid var(--code-border);
+    border-radius: 4px;
+    color: var(--ink);
+  }
+
+  /* LISTS */
+  main ul, main ol {
+    margin: 0 0 20px 0;
+    padding-left: 0;
+    list-style: none;
+  }
+  main ul li, main ol li {
+    position: relative;
+    padding-left: 24px;
+    font-size: 15px; line-height: 1.7;
+    color: var(--ink-2);
+    margin-bottom: 8px;
+    letter-spacing: -0.005em;
+  }
+  main ul li strong, main ol li strong { color: var(--ink); font-weight: 500; }
+  main ul li::before {
+    content: '';
+    position: absolute; left: 8px; top: 12px;
+    width: 4px; height: 4px;
+    background: var(--ink-3); border-radius: 50%;
+  }
+  main ol { counter-reset: listnum; }
+  main ol li { counter-increment: listnum; }
+  main ol li::before {
+    content: counter(listnum, decimal-leading-zero);
+    position: absolute; left: 0; top: 0;
+    font-family: 'Geist Mono', monospace;
+    font-size: 11px; color: var(--ink-4);
+  }
+
+  /* BLOCKQUOTE / INSIGHT */
+  main blockquote, .insight {
+    margin: 28px 0;
+    padding: 4px 0 4px 24px;
+    border-left: 2px solid var(--ink);
+    font-family: 'Geist', sans-serif;
+    font-size: 18px;
+    line-height: 1.5;
+    color: var(--ink);
+    letter-spacing: -0.015em;
+    font-weight: 400;
+  }
+  main blockquote cite, .insight cite {
+    display: block;
+    margin-top: 12px;
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px;
+    color: var(--ink-4);
+    font-style: normal;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  /* CODE BLOCKS */
+  pre {
+    margin: 20px 0;
+    padding: 18px 20px;
+    background: var(--code-bg);
+    border: 1px solid var(--code-border);
+    border-radius: 8px;
+    overflow-x: auto;
+    font-family: 'Geist Mono', monospace;
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: var(--ink-2);
+  }
+  pre code {
+    padding: 0; background: none; border: none;
+    font-size: inherit; color: inherit;
+  }
+
+  /* CALLOUTS */
+  .callout {
+    margin: 24px 0;
+    padding: 16px 20px;
+    border-radius: 8px;
+    border: 1px solid;
+    display: flex; gap: 14px;
+    align-items: flex-start;
+  }
+  .callout-icon {
+    flex-shrink: 0;
+    width: 16px; height: 16px;
+    margin-top: 2px;
+  }
+  .callout-body {
+    font-size: 13.5px; line-height: 1.6;
+    letter-spacing: -0.005em;
+    flex: 1;
+  }
+  .callout-body strong { font-weight: 500; }
+  .callout-body p { font-size: inherit; line-height: inherit; color: inherit; margin-bottom: 10px; }
+  .callout-body p:last-child { margin-bottom: 0; }
+  .callout-body ul li, .callout-body ol li {
+    font-size: 13.5px; color: inherit;
+  }
+  .callout-body ul li::before { background: currentColor; opacity: 0.7; }
+  .callout-label {
+    display: block;
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    margin-bottom: 4px; font-weight: 500;
+  }
+  .callout-info {
+    background: var(--info-bg); border-color: var(--info-border); color: var(--info-ink);
+  }
+  .callout-info .callout-icon { color: #0284c7; }
+  .callout-info code { background: rgba(255,255,255,0.6); border-color: var(--info-border); }
+  .callout-warn {
+    background: var(--warn-bg); border-color: var(--warn-border); color: var(--warn-ink);
+  }
+  .callout-warn .callout-icon { color: #d97706; }
+  .callout-warn code { background: rgba(255,255,255,0.6); border-color: var(--warn-border); }
+  .callout-ok {
+    background: var(--ok-bg); border-color: var(--ok-border); color: var(--ok-ink);
+  }
+  .callout-ok .callout-icon { color: #16a34a; }
+  .callout-ok code { background: rgba(255,255,255,0.6); border-color: var(--ok-border); }
+
+  /* NEUTRAL CALLOUT (Udforsk videre / Sådan læses den) */
+  .callout-neutral {
+    background: var(--tint);
+    border-color: var(--line);
+    color: var(--ink-2);
+  }
+  .callout-neutral .callout-icon { color: var(--ink-3); }
+  .callout-neutral .callout-label { color: var(--ink-3); }
+
+  /* TABLES */
+  .table-wrap {
+    margin: 24px 0;
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  thead { background: var(--tint); }
+  th {
+    text-align: left;
+    padding: 11px 16px;
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px; font-weight: 500;
+    letter-spacing: 0.05em; text-transform: uppercase;
+    color: var(--ink-3);
+    border-bottom: 1px solid var(--line);
+  }
+  td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--line-2);
+    color: var(--ink-2);
+    line-height: 1.55;
+    vertical-align: top;
+  }
+  tr:last-child td { border-bottom: none; }
+  td.col-label {
+    font-weight: 500;
+    color: var(--ink);
+    white-space: nowrap;
+  }
+  td.col-mono {
+    font-family: 'Geist Mono', monospace;
+    font-size: 12px;
+  }
+  td.col-hit { color: var(--ok-ink); }
+  td.col-miss { color: var(--ink-4); }
+  td.col-best {
+    font-weight: 500;
+    color: var(--ink);
+  }
+
+  /* DIAGRAM (figure with SVG inside) */
+  .diagram {
+    margin: 28px 0;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--bg);
+  }
+  .diagram svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    background: var(--tint);
+  }
+  .diagram-caption {
+    padding: 12px 18px;
+    font-family: 'Geist Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-3);
+    letter-spacing: 0.02em;
+    border-top: 1px solid var(--line);
+  }
+  .diagram-caption strong { color: var(--ink); font-weight: 500; margin-right: 8px; }
+
+  /* DETAILS / DYK DYBERE */
+  details.deep-dive {
+    margin: 24px 0;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--bg);
+    overflow: hidden;
+  }
+  details.deep-dive summary {
+    padding: 14px 18px;
+    font-family: 'Geist Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+    cursor: pointer;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: background 0.15s;
+  }
+  details.deep-dive summary::-webkit-details-marker { display: none; }
+  details.deep-dive summary::before {
+    content: '+';
+    font-family: 'Geist Mono', monospace;
+    font-weight: 500;
+    color: var(--ink-3);
+    font-size: 14px;
+    transition: transform 0.2s;
+  }
+  details.deep-dive[open] summary::before { content: '−'; }
+  details.deep-dive summary:hover { background: var(--tint); }
+  .deep-content {
+    padding: 4px 18px 18px 18px;
+    border-top: 1px solid var(--line);
+    background: var(--tint);
+  }
+  .deep-content p {
+    font-size: 14px;
+    line-height: 1.65;
+    color: var(--ink-2);
+    margin-bottom: 12px;
+  }
+  .deep-content p:last-child { margin-bottom: 0; }
+
+  /* DECISION LIST */
+  .decision-list {
+    margin: 28px 0;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .decision-row {
+    display: grid;
+    grid-template-columns: 160px 1fr;
+    border-bottom: 1px solid var(--line-2);
+  }
+  .decision-row:last-child { border-bottom: none; }
+  .decision-key {
+    padding: 16px 18px;
+    background: var(--tint);
+    border-right: 1px solid var(--line);
+    font-family: 'Geist Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .decision-val {
+    padding: 16px 20px;
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--ink-2);
+  }
+  .decision-val strong {
+    display: block;
+    color: var(--ink);
+    font-weight: 500;
+    margin-bottom: 4px;
+  }
+
+  /* SCORE LADDER */
+  .score-ladder {
+    margin: 24px 0;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .score-row {
+    display: grid;
+    grid-template-columns: 110px 1fr;
+    border-bottom: 1px solid var(--line-2);
+  }
+  .score-row:last-child { border-bottom: none; }
+  .score-range {
+    padding: 16px 18px;
+    background: var(--tint);
+    border-right: 1px solid var(--line);
+    font-family: 'Geist Mono', monospace;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+  }
+  .score-row.strong .score-range { color: var(--ok-ink); background: var(--ok-bg); border-right-color: var(--ok-border); }
+  .score-row.ok .score-range { color: var(--ink-2); }
+  .score-row.weak .score-range { color: var(--warn-ink); background: var(--warn-bg); border-right-color: var(--warn-border); }
+  .score-row.noise .score-range { color: var(--ink-4); }
+  .score-desc {
+    padding: 16px 20px;
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--ink-2);
+  }
+  .score-desc strong {
+    display: block;
+    color: var(--ink);
+    font-weight: 500;
+    margin-bottom: 4px;
+  }
+
+  /* GLOSSARY */
+  .glossary-grid {
+    display: grid;
+    gap: 16px;
+    margin: 24px 0;
+  }
+  .glossary-item {
+    padding: 16px 18px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--bg);
+    scroll-margin-top: 24px;
+  }
+  .glossary-term {
+    font-family: 'Geist', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--ink);
+    margin-bottom: 6px;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    letter-spacing: -0.01em;
+  }
+  .pronounce {
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px;
+    font-weight: 400;
+    color: var(--ink-4);
+    letter-spacing: 0.02em;
+  }
+  .glossary-def {
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: var(--ink-2);
+    letter-spacing: -0.005em;
+  }
+
+  /* RESOURCE LIST */
+  .resource-list {
+    display: grid;
+    gap: 10px;
+    margin: 24px 0;
+  }
+  .resource {
+    display: block;
+    padding: 16px 18px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--bg);
+    text-decoration: none !important;
+    color: inherit;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .resource:hover {
+    border-color: var(--ink-3);
+    background: var(--tint);
+  }
+  .resource-type {
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px;
+    color: var(--ink-4);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .resource-title {
+    font-family: 'Geist', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--ink);
+    margin-bottom: 4px;
+    letter-spacing: -0.01em;
+  }
+  .resource-desc {
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: var(--ink-3);
+    letter-spacing: -0.005em;
+  }
+
+  /* COLOPHON */
+  .colophon {
+    margin-top: 40px;
+    padding: 18px 20px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--tint);
+  }
+  .colophon p {
+    font-family: 'Geist Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-3);
+    margin-bottom: 4px;
+    letter-spacing: 0.02em;
+  }
+
+  /* CHAPTER FOOTER */
+  .chapter-footer {
+    margin-top: 72px;
+    padding-top: 32px;
+    border-top: 1px solid var(--line);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+  .chapter-footer-nav {
+    font-family: 'Geist Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-3);
+    letter-spacing: 0.02em;
+  }
+  .chapter-footer-nav a {
+    color: var(--ink);
+    text-decoration: none;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 2px;
+    transition: border-color 0.15s;
+  }
+  .chapter-footer-nav a:hover { border-bottom-color: var(--ink); }
+  .chapter-footer-meta {
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px;
+    color: var(--ink-4);
+    letter-spacing: 0.02em;
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 980px) {
+    .sheet { margin: 16px; }
+    .layout { grid-template-columns: 1fr; }
+    .toc {
+      position: static; height: auto;
+      border-right: none;
+      border-bottom: 1px solid var(--line);
+      padding: 32px 32px 24px;
+    }
+    .topbar { padding: 16px 32px; }
+    main { padding: 32px; max-width: none; }
+    h1 { font-size: 32px; }
+    h2 { font-size: 22px; }
+    .decision-row, .score-row { grid-template-columns: 1fr; }
+    .decision-key, .score-range {
+      border-right: none;
+      border-bottom: 1px solid var(--line);
+    }
+  }
+
+  /* STAT ROW — store tal-blokke */
+  .stat-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin: 28px 0;
+  }
+  .stat-block {
+    padding: 22px 20px;
+    background: var(--tint);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    text-align: center;
+  }
+  .stat-num {
+    font-family: 'Geist', sans-serif;
+    font-size: 32px;
+    font-weight: 500;
+    letter-spacing: -0.03em;
+    color: var(--ink);
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+  .stat-label {
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px;
+    color: var(--ink-3);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    line-height: 1.5;
+  }
+
+  /* Tabel-celle farvning */
+  td.cell-warn { color: var(--warn-ink); font-weight: 500; }
+  td.cell-ok { color: var(--ok-ink); font-weight: 500; }
+  td.cell-accent { color: var(--ink); font-weight: 500; }
+
+  @media (max-width: 720px) {
+    .stat-row { grid-template-columns: 1fr; }
+    .stat-num { font-size: 26px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="progress"></div>
+
+<div class="sheet">
+
+  <header class="topbar">
+    <div class="topbar-left">
+      <div class="logo-dot"></div>
+      <span class="mono">RYAN VELIN · VIDENSBANK</span>
+    </div>
+    <div class="topbar-right">
+      <a href="index.html">← FORSIDE</a>
+    </div>
+  </header>
+
+  <div class="layout">
+
+    <aside class="toc">
+      <div class="toc-label">Indhold</div>
+      <ol>
+        <li><a href="#forord">Forord</a></li>
+        <li><a href="#hvad-er-et-library">Hvad er et FCP Library?</a></li>
+        <li><a href="#sqlite-designfilosofi">SQLite kender ikke netværk</a></li>
+        <li><a href="#tre-mekanismer">Tre mekanismer der bryder ned</a></li>
+        <li><a href="#wal">WAL — virker ikke på netværk</a></li>
+        <li><a href="#korruption">Korruption — ikke teori</a></li>
+        <li><a href="#maalinger">100 Knive — hvad vi målte</a></li>
+        <li><a href="#raid6">RAID 6 og write penalty</a></li>
+        <li><a href="#hvad-vi-ikke-ved">Hvad vi ikke ved endnu</a></li>
+        <li><a href="#ordbok">Ordbog</a></li>
+        <li><a href="#videre">Videre læsning</a></li>
+      </ol>
+    </aside>
+
+    <main>
+
+      <div class="chapter-hero">
+        <div class="chapter-hero-meta">
+          <span class="chapter-badge">Kapitel 03</span>
+          <span class="chapter-time">~ 25 min læsetid</span>
+        </div>
+        <h1>Databasen der ikke hører til<br><span class="dim">på netværket.</span></h1>
+        <p class="chapter-lede">
+          Et Final Cut Pro Library ser ud som en mappe. Det er det ikke. Det er en relationel database — og den database er designet til at leve lokalt. Dette kapitel dokumenterer præcis hvorfor det er et problem at lægge den på et NAS, hvad SQLite selv siger om det, og hvad vores egne målinger fra 100 Knive-produktionen viser.
+        </p>
+        <div class="hero-meta-row">
+          <div class="hero-meta-item">Læsetid<strong>~ 25 min</strong></div>
+          <div class="hero-meta-item">Datagrundlag<strong>FCPMonitor, marts 2026</strong></div>
+          <div class="hero-meta-item">Niveau<strong>Teknisk mellemvej</strong></div>
+          <div class="hero-meta-item">Program<strong>100 Knive</strong></div>
+        </div>
+      </div>
+
+      <!-- ═══════════════ 00 FORORD ═══════════════ -->
+      <div class="divider">
+        <span class="divider-num">00</span>
+        <span class="divider-label">Forord</span>
+        <span class="divider-line"></span>
+      </div>
+
+      <h2 id="forord">Hvad dette kapitel er — og ikke er</h2>
+
+      <p>Dette kapitel har to kilder: <strong>officiel SQLite-dokumentation</strong> (direkte citater fra sqlite.org) og <strong>klient-side målinger</strong> fra FCPMonitor indsamlet under 100 Knive-klipperummet den 25.–26. marts 2026. De to ting understøtter hinanden.</p>
+
+      <p>Det er ikke en konklusion. Server-side data fra FleetManager mangler — og uden det kan vi ikke kvantificere præcist hvad flaskehalsen er. Men vi kan sige: SQLite's arkitektur er inkompatibel med netværksfilsystemer i en veldefineret og dokumenteret forstand, og vores målinger er konsistente med det.</p>
+
+      <div class="callout callout-info">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+        <div class="callout-body">
+          <span class="callout-label">Sådan læses dette kapitel</span>
+          <p>Start fra toppen hvis du vil forstå mekanikken. Spring til <strong>sektion 06</strong> hvis du kun vil se målingerne. Spring til <strong>sektion 09</strong> for ordbog over alle tekniske termer.</p>
+        </div>
+      </div>
+
+      <div class="callout callout-neutral">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        <div class="callout-body">
+          <span class="callout-label">Forudsætninger</span>
+          Du behøver ikke vide hvad en database er i forvejen. Næste sektion forklarer hvad et FCP Library faktisk er, fra bunden.
+        </div>
+      </div>
+
+      <!-- ═══════════════ 01 HVAD ER ET FCP LIBRARY ═══════════════ -->
+      <div class="divider">
+        <span class="divider-num">01</span>
+        <span class="divider-label">Det grundlæggende</span>
+        <span class="divider-line"></span>
+      </div>
+
+      <h2 id="hvad-er-et-library">Hvad er et FCP Library egentlig?</h2>
+
+      <p>Hvis du åbner et FCP Library-bundle i Finder (højreklik → "Vis pakkeindhold"), finder du en undermappe kaldet <code>CurrentVersion.fcpbundle</code> og inden i den en fil der hedder <code>Library.fcpproject</code>. Det er en <a href="#sqlite">SQLite</a>-database.</p>
+
+      <p>En SQLite-database er ikke en videofil. Det er ikke en simpel tekstfil med navne og tidskoder. Det er en <strong>relationel database</strong> — præcis den samme type som banker, webshops og sociale medier bruger til at gemme strukturerede data. Bare meget, meget lettere.</p>
+
+      <blockquote>
+        Et FCP Library er en database forklædt som en mappe. Hver klipning, hvert cut, hvert effektparameter, hvert autosave — det er databasetransaktioner.
+        <cite>Hvad det betyder for lagring</cite>
+      </blockquote>
+
+      <h3>Hvad gemmes i databasen?</h3>
+
+      <p>FCP gemmer ikke mediefilerne i biblioteket — de ligger enten som "managed" (inde i bundlet) eller "external" (en reference til en sti). Men <em>alt andet</em> er databaseposter:</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Hvad</th><th>Databasens rolle</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="col-label">Projektstruktur</td><td>Hvilke Events, hvilke Projects, hierarkiet</td></tr>
+            <tr><td class="col-label">Tidslinjer</td><td>Hvert klip, hvert cut, hver transition — med tidskoder</td></tr>
+            <tr><td class="col-label">Metadata</td><td>Ratings, keywords, noter, roller</td></tr>
+            <tr><td class="col-label">Effektparametre</td><td>Colour correction-kurver, audio-levels, stabilisering</td></tr>
+            <tr><td class="col-label">Autosave-historik</td><td>FCP's snapshots — "Time Machine for dit projekt"</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <details class="deep-dive">
+        <summary>Dyk dybere — SQLite som "application file format"</summary>
+        <div class="deep-content">
+          <p>SQLite's egne dokumentationssider beskriver eksplicit brugen som filformat for desktop-applikationer: "SQLite is often used as the on-disk file format for desktop applications such as version control systems, financial analysis tools, <strong>media cataloging and editing suites</strong>, CAD packages, record keeping programs." FCP er et lærebogeksempel på denne use case — og præcis derfor er det en god match til lokal lagring og et dårlig match til netværkslagring.</p>
+        </div>
+      </details>
+
+      <!-- ═══════════════ 02 SQLITE DESIGNFILOSOFI ═══════════════ -->
+      <div class="divider">
+        <span class="divider-num">02</span>
+        <span class="divider-label">Arkitektur</span>
+        <span class="divider-line"></span>
+      </div>
+
+      <h2 id="sqlite-designfilosofi">SQLite er designet til lokal lagring</h2>
+
+      <p>De fleste databaser du hører om — PostgreSQL, MySQL, MongoDB — er <a href="#client-server">klient/server-databaser</a>. Det betyder at der kører en separat databaseproces (en "server") et sted, og applikationen sender forespørgsler til den via et netværkskald. Databaseserveren fungerer som et filter: den modtager en lille forespørgsel og sender kun det relevante resultat retur.</p>
+
+      <p>SQLite er anderledes. Der er <em>ingen databaseserver</em>. Applikationen (FCP) taler direkte med databasefilen via systemkald til filsystemet. Filen er databasen. Det betyder at al databasetrafik — alle læsninger og skrivninger — skal gå direkte til den fil, uanset hvor den ligger.</p>
+
+      <div class="diagram">
+        <svg viewBox="0 0 700 290" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="k3-arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#525252"/></marker>
+            <marker id="k3-arrblk" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#0a0a0a"/></marker>
+            <marker id="k3-arrwarn" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#d97706"/></marker>
+          </defs>
+
+          <!-- Klient/server model -->
+          <text x="160" y="28" font-family="Geist Mono, monospace" font-size="10" fill="#525252" text-anchor="middle" letter-spacing="1.5" font-weight="500">KLIENT/SERVER (PostgreSQL etc.)</text>
+          <rect x="20" y="45" width="120" height="50" rx="6" fill="#fafafa" stroke="#ededed" stroke-width="1.5"/>
+          <text x="80" y="65" font-family="Geist, sans-serif" font-size="13" fill="#0a0a0a" text-anchor="middle" font-weight="500">Applikation</text>
+          <text x="80" y="83" font-family="Geist Mono, monospace" font-size="10" fill="#525252" text-anchor="middle">(fx FCP)</text>
+          <line x1="142" y1="70" x2="172" y2="70" stroke="#525252" stroke-width="1.5" marker-end="url(#k3-arr)"/>
+          <text x="157" y="62" font-family="Geist Mono, monospace" font-size="9" fill="#525252" text-anchor="middle">SQL</text>
+          <rect x="174" y="45" width="120" height="50" rx="6" fill="#fafafa" stroke="#16a34a" stroke-width="1.5"/>
+          <text x="234" y="65" font-family="Geist, sans-serif" font-size="13" fill="#0a0a0a" text-anchor="middle" font-weight="500">DB Server</text>
+          <text x="234" y="83" font-family="Geist Mono, monospace" font-size="10" fill="#16a34a" text-anchor="middle">filtrerer data</text>
+          <line x1="296" y1="70" x2="326" y2="70" stroke="#525252" stroke-width="1.5" marker-end="url(#k3-arr)"/>
+          <text x="311" y="62" font-family="Geist Mono, monospace" font-size="9" fill="#525252" text-anchor="middle">svar</text>
+          <rect x="328" y="45" width="90" height="50" rx="6" fill="#fafafa" stroke="#ededed" stroke-width="1.5"/>
+          <text x="373" y="68" font-family="Geist, sans-serif" font-size="13" fill="#0a0a0a" text-anchor="middle" font-weight="500">DB fil</text>
+          <text x="373" y="85" font-family="Geist Mono, monospace" font-size="9" fill="#525252" text-anchor="middle">på disk</text>
+          <text x="234" y="120" font-family="Geist Mono, monospace" font-size="10" fill="#16a34a" text-anchor="middle">✓ Netværk er ok — serveren filtrerer</text>
+
+          <!-- SQLite model -->
+          <text x="580" y="28" font-family="Geist Mono, monospace" font-size="10" fill="#525252" text-anchor="middle" letter-spacing="1.5" font-weight="500">SQLITE (FCP)</text>
+          <rect x="490" y="45" width="120" height="50" rx="6" fill="#fafafa" stroke="#ededed" stroke-width="1.5"/>
+          <text x="550" y="65" font-family="Geist, sans-serif" font-size="13" fill="#0a0a0a" text-anchor="middle" font-weight="500">Applikation</text>
+          <text x="550" y="83" font-family="Geist Mono, monospace" font-size="10" fill="#525252" text-anchor="middle">(FCP)</text>
+          <line x1="612" y1="70" x2="648" y2="70" stroke="#0a0a0a" stroke-width="2" stroke-dasharray="4,2" marker-end="url(#k3-arrblk)"/>
+          <text x="630" y="62" font-family="Geist Mono, monospace" font-size="9" fill="#0a0a0a" text-anchor="middle">direkte</text>
+          <rect x="650" y="45" width="40" height="50" rx="6" fill="#fafafa" stroke="#0a0a0a" stroke-width="1.5"/>
+          <text x="670" y="73" font-family="Geist, sans-serif" font-size="11" fill="#0a0a0a" text-anchor="middle" font-weight="500">.db</text>
+          <text x="580" y="120" font-family="Geist Mono, monospace" font-size="10" fill="#d97706" text-anchor="middle">⚠ Al trafik går direkte til filen</text>
+
+          <line x1="440" y1="0" x2="440" y2="140" stroke="#ededed" stroke-width="1"/>
+
+          <!-- NFS scenario -->
+          <text x="350" y="180" font-family="Geist Mono, monospace" font-size="10" fill="#525252" text-anchor="middle" letter-spacing="1.5" font-weight="500">NÅR .db FIL LIGGER PÅ NAS (NFS)</text>
+          <rect x="50" y="200" width="110" height="45" rx="6" fill="#fafafa" stroke="#ededed" stroke-width="1.5"/>
+          <text x="105" y="220" font-family="Geist, sans-serif" font-size="12" fill="#0a0a0a" text-anchor="middle" font-weight="500">FCP</text>
+          <text x="105" y="236" font-family="Geist Mono, monospace" font-size="9" fill="#525252" text-anchor="middle">Mac mini</text>
+          <line x1="162" y1="222" x2="230" y2="222" stroke="#d97706" stroke-width="2" marker-end="url(#k3-arrwarn)"/>
+          <text x="196" y="215" font-family="Geist Mono, monospace" font-size="9" fill="#d97706" text-anchor="middle">NFS</text>
+          <text x="196" y="238" font-family="Geist Mono, monospace" font-size="9" fill="#a3a3a3" text-anchor="middle">10GbE</text>
+          <rect x="232" y="200" width="100" height="45" rx="6" fill="#fafafa" stroke="#0a0a0a" stroke-width="1.5"/>
+          <text x="282" y="220" font-family="Geist, sans-serif" font-size="12" fill="#0a0a0a" text-anchor="middle" font-weight="500">NAS</text>
+          <text x="282" y="236" font-family="Geist Mono, monospace" font-size="9" fill="#0a0a0a" text-anchor="middle">Synology</text>
+          <line x1="334" y1="222" x2="390" y2="222" stroke="#525252" stroke-width="1.5" marker-end="url(#k3-arr)"/>
+          <rect x="392" y="200" width="90" height="45" rx="6" fill="#fafafa" stroke="#ededed" stroke-width="1.5"/>
+          <text x="437" y="220" font-family="Geist, sans-serif" font-size="12" fill="#0a0a0a" text-anchor="middle" font-weight="500">HDD</text>
+          <text x="437" y="236" font-family="Geist Mono, monospace" font-size="9" fill="#525252" text-anchor="middle">RAID 6</text>
+          <text x="105" y="268" font-family="Geist Mono, monospace" font-size="9" fill="#16a34a" text-anchor="middle">lokal SQLite-motor</text>
+          <text x="282" y="268" font-family="Geist Mono, monospace" font-size="9" fill="#0a0a0a" text-anchor="middle">locking? fsync?</text>
+          <text x="437" y="268" font-family="Geist Mono, monospace" font-size="9" fill="#d97706" text-anchor="middle">random I/O</text>
+        </svg>
+        <div class="diagram-caption"><strong>Fig. 1.</strong> SQLite vs. klient/server-arkitektur — og hvad der sker på NFS.</div>
+      </div>
+
+      <p>SQLite's dokumentation siger det direkte og gentager det på tværs af mindst syv forskellige sider:</p>
+
+      <blockquote>
+        "SQLite is designed for situations where the data and application coexist on the same machine."
+        <cite>sqlite.org/useovernet.html</cite>
+      </blockquote>
+
+      <blockquote>
+        "Generally, if your data is separated from the application by a network, you want to use a client/server database."
+        <cite>sqlite.org/useovernet.html</cite>
+      </blockquote>
+
+      <p>Det er ikke en anbefaling om performance-optimering. Det er en arkitekturel begrænsning.</p>
+
+      <details class="deep-dive">
+        <summary>Dyk dybere — hvorfor genererer SQLite så meget trafik?</summary>
+        <div class="deep-content">
+          <p>Når FCP beder SQLite om at gemme én ændring — fx at du har flyttet et klip — sker der mere end du tror. SQLite skal: (1) Læse eksisterende databasesider ind i hukommelsen. (2) Opdatere relevante indekser. (3) Skrive en <em>journal</em> (en log over hvad der ændres, så databasen kan rulles tilbage hvis noget går galt). (4) Skrive de ændrede sider. (5) Bekræfte at de faktisk er nået til disk (fsync). Alt dette er intern databasemekanik der normalt er usynlig — men på NFS bliver hvert enkelt systemkald til netværkstrafik.</p>
+          <p>SQLite's dokumentation formulerer det sådan: "Profiling indicates that for most systems and in most circumstances SQLite spends most of its time doing disk I/O." Lokal SSD: hvert kald tager mikrosekunder. NFS: hvert kald er en netværkstur med latency og potentielle fejl.</p>
+        </div>
+      </details>
+
+
+      <!-- ═══════════════ 03 TRE MEKANISMER ═══════════════ -->
+      <div class="divider">
+        <span class="divider-num">03</span>
+        <span class="divider-label">Mekanik</span>
+        <span class="divider-line"></span>
+      </div>
+
+      <h2 id="tre-mekanismer">Tre mekanismer der bryder ned på NFS</h2>
+
+      <p>Det er ikke ét problem med SQLite på NFS. Det er tre uafhængige problemer der alle opstår på samme tid. Hver af dem er tilstrækkeligt alvorlig alene — tilsammen er de det fulde billede.</p>
+
+      <h3>Mekanisme 1 — Fillåsning</h3>
+
+      <p>SQLite bruger <a href="#fillaasning">fillåsning</a> til at sikre at to processer ikke skriver til databasen samtidig. Når FCP skal foretage en transaktion, beder den operativsystemet om en lås på databasefilen. Normalt virker dette fint — men på NFS er implementeringen af disse låse historisk buggy.</p>
+
+      <blockquote>
+        "SQLite depends on the underlying filesystem to do locking as the documentation says it will. But some filesystems contain bugs in their locking logic such that the locks do not always behave as advertised. This is especially true of network filesystems and NFS in particular."
+        <cite>sqlite.org/howtocorrupt.html</cite>
+      </blockquote>
+
+      <blockquote>
+        "One should note that POSIX advisory locking is known to be buggy or even unimplemented on many NFS implementations (including recent versions of Mac OS X)."
+        <cite>sqlite.org/lockingv3.html</cite>
+      </blockquote>
+
+      <div class="callout callout-warn">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <div class="callout-body">
+          <span class="callout-label">Specifikt for vores setup</span>
+          <p>Dokumentationen nævner eksplicit <strong>macOS</strong> som en platform med kendte NFS-låseproblemer. Vores setup er præcis dette: Mac mini M4 Pro på macOS Tahoe, NFS-mount til Synology RS4021xs+.</p>
+        </div>
+      </div>
+
+      <h3>Mekanisme 2 — fsync</h3>
+
+      <p><a href="#fsync">fsync</a> er et systemkald der fortæller operativsystemet: "skriv alt hvad du har i din buffer til den fysiske disk — og vent til det er gjort." SQLite bruger fsync som en kernegaranti for dataintegritet: den vil ikke bekræfte en transaktion som gemt, før den har fået bekræftelse på at data faktisk er nået til disk.</p>
+
+      <p>På en lokal SSD tager fsync mikrosekunder. På NFS kræver det at klienten sender en synkroniseringskommando til NAS-serveren og venter på et svar — en hel netværksrundtur. Og det bliver værre:</p>
+
+      <blockquote>
+        "Unfortunately for some applications, network filesystem sync operation can be less robust than local filesystem sync. Attaining robust sync in the face of network packet transport errors is hard, and safeguards are sometimes relaxed in favor of performance."
+        <cite>sqlite.org/useovernet.html</cite>
+      </blockquote>
+
+      <p>Det vil sige: NFS-implementeringen kan vælge at lyve til SQLite om at synkroniseringen er gennemført — af hensyn til performance. SQLite tror data er gemt. Det er det måske ikke.</p>
+
+      <h3>Mekanisme 3 — Skriveordning</h3>
+
+      <p>SQLite er afhængig af at skrivninger ankommer til disk i præcist den rækkefølge de blev sendt. En database er en struktureret datastruktur — og hvis du skriver data i forkert rækkefølge, ender du med en inkonsistent, potentielt korrupt tilstand.</p>
+
+      <blockquote>
+        "Some portions of what a client writes can end up stored out of time order relative to other portions written."
+        <cite>sqlite.org/useovernet.html</cite>
+      </blockquote>
+
+      <div class="callout callout-warn">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <div class="callout-body">
+          <span class="callout-label">Advarsel — ikke kun performance</span>
+          <p>Disse tre mekanismer handler ikke primært om performance. De handler om <strong>dataintegritet</strong>. Konsekvensen er ikke nødvendigvis at FCP er langsomt — det er at databasen kan ende i en korrupt tilstand.</p>
+        </div>
+      </div>
+
+      <details class="deep-dive">
+        <summary>Dyk dybere — fcntl() og POSIX advisory locking</summary>
+        <div class="deep-content">
+          <p>På macOS og Linux bruger SQLite <code>fcntl()</code>-systemkaldet til at låse filer. <em>POSIX advisory locking</em> er en standard der beskriver hvordan dette skal fungere — men "advisory" er nøgleordet: det er en frivillig aftale mellem processer. Operativsystemet håndhæver ikke låsene overfor processer der ikke beder om det. Over NFS er implementeringen historisk set buggy fordi låseinformationen skal koordineres mellem to computere via netværksprotokoller, hvilket introducerer race conditions.</p>
+        </div>
+      </details>
+
+      <!-- ═══════════════ 04 WAL ═══════════════ -->
+      <div class="divider">
+        <span class="divider-num">04</span>
+        <span class="divider-label">Write-Ahead Logging</span>
+        <span class="divider-line"></span>
+      </div>
+
+      <h2 id="wal">WAL — den skrivemetode der ikke virker over netværk</h2>
+
+      <p>SQLite har to måder at håndtere skrivninger på: den traditionelle <a href="#rollback-journal">rollback-journal</a> og den nyere <a href="#wal-term">Write-Ahead Logging (WAL)</a>. WAL er den hurtigere og mere effektive — og det er med al sandsynlighed den tilstand macOS og FCP bruger på lokale diske.</p>
+
+      <p>Problemet er at WAL er eksplicit inkompatibel med netværksfilsystemer:</p>
+
+      <blockquote>
+        "All processes using a database must be on the same host computer; WAL does not work over a network filesystem. This is because WAL requires all processes to share a small amount of memory and processes on separate host machines obviously cannot share memory with each other."
+        <cite>sqlite.org/wal.html</cite>
+      </blockquote>
+
+      <div class="diagram">
+        <svg viewBox="0 0 680 230" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="w-arrok" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#16a34a"/></marker>
+            <marker id="w-arrwarn" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#d97706"/></marker>
+          </defs>
+
+          <!-- WAL lokal -->
+          <text x="180" y="22" font-family="Geist Mono, monospace" font-size="10" fill="#525252" text-anchor="middle" letter-spacing="1" font-weight="500">WAL — LOKALT</text>
+
+          <rect x="20" y="40" width="80" height="38" rx="5" fill="#fafafa" stroke="#ededed"/>
+          <text x="60" y="55" font-family="Geist Mono, monospace" font-size="10" fill="#0a0a0a" text-anchor="middle">FCP</text>
+          <text x="60" y="70" font-family="Geist Mono, monospace" font-size="9" fill="#16a34a" text-anchor="middle">skriver</text>
+
+          <line x1="102" y1="59" x2="130" y2="59" stroke="#16a34a" stroke-width="1.5" marker-end="url(#w-arrok)"/>
+
+          <rect x="132" y="40" width="80" height="38" rx="5" fill="#fafafa" stroke="#16a34a" stroke-width="1.5"/>
+          <text x="172" y="55" font-family="Geist Mono, monospace" font-size="10" fill="#0a0a0a" text-anchor="middle">WAL-fil</text>
+          <text x="172" y="70" font-family="Geist Mono, monospace" font-size="9" fill="#16a34a" text-anchor="middle">append</text>
+
+          <line x1="214" y1="59" x2="242" y2="59" stroke="#16a34a" stroke-width="1.5" marker-end="url(#w-arrok)"/>
+
+          <rect x="244" y="40" width="90" height="38" rx="5" fill="#fafafa" stroke="#ededed"/>
+          <text x="289" y="55" font-family="Geist Mono, monospace" font-size="10" fill="#0a0a0a" text-anchor="middle">DB-fil</text>
+          <text x="289" y="70" font-family="Geist Mono, monospace" font-size="9" fill="#16a34a" text-anchor="middle">checkpoint</text>
+
+          <text x="175" y="105" font-family="Geist Mono, monospace" font-size="9" fill="#16a34a" text-anchor="middle">✓ Sekventielt · 1 skrivning · delt RAM</text>
+
+          <line x1="370" y1="0" x2="370" y2="230" stroke="#ededed" stroke-width="1"/>
+
+          <text x="530" y="22" font-family="Geist Mono, monospace" font-size="10" fill="#525252" text-anchor="middle" letter-spacing="1" font-weight="500">WAL — OVER NFS</text>
+
+          <rect x="390" y="40" width="80" height="38" rx="5" fill="#fafafa" stroke="#ededed"/>
+          <text x="430" y="55" font-family="Geist Mono, monospace" font-size="10" fill="#0a0a0a" text-anchor="middle">FCP</text>
+          <text x="430" y="70" font-family="Geist Mono, monospace" font-size="9" fill="#525252" text-anchor="middle">Mac mini</text>
+
+          <line x1="472" y1="59" x2="500" y2="59" stroke="#d97706" stroke-width="2" stroke-dasharray="5,3" marker-end="url(#w-arrwarn)"/>
+
+          <rect x="502" y="40" width="80" height="38" rx="5" fill="#fafafa" stroke="#d97706" stroke-width="1.5"/>
+          <text x="542" y="55" font-family="Geist Mono, monospace" font-size="10" fill="#0a0a0a" text-anchor="middle">WAL-fil</text>
+          <text x="542" y="70" font-family="Geist Mono, monospace" font-size="9" fill="#d97706" text-anchor="middle">på NAS?</text>
+
+          <line x1="584" y1="59" x2="612" y2="59" stroke="#d97706" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#w-arrwarn)"/>
+
+          <rect x="614" y="40" width="54" height="38" rx="5" fill="#fafafa" stroke="#ededed"/>
+          <text x="641" y="62" font-family="Geist Mono, monospace" font-size="10" fill="#0a0a0a" text-anchor="middle">DB-fil</text>
+
+          <text x="530" y="105" font-family="Geist Mono, monospace" font-size="9" fill="#d97706" text-anchor="middle">✗ Shared memory virker ikke over netværk</text>
+
+          <rect x="390" y="130" width="278" height="62" rx="6" fill="#fffbeb" stroke="#fde68a" stroke-width="1.5"/>
+          <text x="529" y="152" font-family="Geist Mono, monospace" font-size="9" fill="#78350f" text-anchor="middle" letter-spacing="1" font-weight="500">KONSEKVENS</text>
+          <text x="529" y="170" font-family="Geist, sans-serif" font-size="12" fill="#0a0a0a" text-anchor="middle">Falder tilbage til rollback-journal</text>
+          <text x="529" y="185" font-family="Geist Mono, monospace" font-size="9" fill="#525252" text-anchor="middle">= dobbelt så mange skrivninger + langsomt</text>
+        </svg>
+        <div class="diagram-caption"><strong>Fig. 2.</strong> WAL lokalt vs. over NFS — og hvad der sker.</div>
+      </div>
+
+      <p>Hvad sker der så når Library ligger på NFS og WAL ikke kan bruges? SQLite falder tilbage til rollback-journal-tilstand, som er den ældre og langsommere metode. Hvor WAL kræver én skrivning pr. transaktion, kræver rollback-journalen <em>to</em>. Hvert autosave, hvert klip du flytter, koster dobbelt så mange diskskrivninger.</p>
+
+      <div class="callout callout-neutral">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        <div class="callout-body">
+          <span class="callout-label">Hvad dette forklarer</span>
+          Kombinationen af rollback-journal (2× skrivninger) og RAID 6 write penalty (op til 6 disk-operationer per logisk skrivning) er muligvis en del af forklaringen på den høje NAS-belastning vi observerede den 25. marts.
+        </div>
+      </div>
+
+      <!-- ═══════════════ 05 KORRUPTION ═══════════════ -->
+      <div class="divider">
+        <span class="divider-num">05</span>
+        <span class="divider-label">Konsekvens</span>
+        <span class="divider-line"></span>
+      </div>
+
+      <h2 id="korruption">Korruption — ikke en teoretisk risiko</h2>
+
+      <p>Når SQLite-dokumentationen beskriver konsekvenserne af at køre på NFS, stopper den ikke ved "nedsat performance." Den beskriver risiko for databasekorruption.</p>
+
+      <blockquote>
+        "If SQLite is used on a filesystem where the locking primitives contain bugs, and if two or more threads or processes try to access the same database at the same time, then database corruption might result."
+        <cite>sqlite.org/howtocorrupt.html</cite>
+      </blockquote>
+
+      <blockquote>
+        "If the network link is inserted into the File I/O channel, transactions may fail (as for the API Call insertion) but with the additional effect that the remote database is corrupted."
+        <cite>sqlite.org/useovernet.html</cite>
+      </blockquote>
+
+      <p>Korruption af et FCP Library betyder tab af projektdata, tidslinjer og autosave-historik. Ikke en mistet frame. Ikke et effekt-parameter der nulstilles. Potentielt hele projektet.</p>
+
+      <div class="callout callout-warn">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <div class="callout-body">
+          <span class="callout-label">SQLite's konklusion</span>
+          <p>"The bottom line is that network filesystem sync and locking reliability vary among implementations and installations. Rely upon it at your (and your customers') peril." — sqlite.org/useovernet.html</p>
+        </div>
+      </div>
+
+      <p>Bemærk formuleringen: <em>"your customers' peril"</em>. SQLite-dokumentationen er opmærksom på at dette ikke kun rammer udvikleren, men det produkt de bygger — og brugerne af det produkt. I vores kontekst: klipperne og projekterne.</p>
+
+
+      <!-- ═══════════════ 06 MÅLINGER ═══════════════ -->
+      <div class="divider">
+        <span class="divider-num">06</span>
+        <span class="divider-label">Data fra 100 Knive</span>
+        <span class="divider-line"></span>
+      </div>
+
+      <h2 id="maalinger">Hvad FCPMonitor målte den 25.–26. marts</h2>
+
+      <p>Den 25. og 26. marts 2026 kørte vi et kontrolleret eksperiment i 100 Knive-klipperummet. Seks Mac mini M4 Pro-maskiner (48 GB RAM, 10GbE), seks klippere og postproducere. Den ene dag lå FCP Libraries på NAS. Den anden dag lokalt.</p>
+
+      <div class="callout callout-info">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+        <div class="callout-body">
+          <span class="callout-label">Hvad er konstant</span>
+          <p>Cache-filer (render, waveforms, thumbnails) lå på NAS <em>begge</em> dage. Forskellen i TX-trafik repræsenterer primært Library-trafik — den SQLite-databaseskrivnings-del der forsvinder fra netværket når Library flyttes lokalt.</p>
+        </div>
+      </div>
+
+      <h3>De fire sammenlignelige maskiner</h3>
+
+      <p>Fire maskiner skiftede konfiguration fra dag til dag. Det giver den mest direkte sammenligning — samme maskine, næsten samme arbejdsdag, ét parameter ændret.</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Maskine</th>
+              <th>TX — NAS (25/3)</th>
+              <th>TX — Lokal (26/3)</th>
+              <th>Forskel</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="col-label">MacMini-54</td>
+              <td class="col-mono">7,1 GB</td>
+              <td class="col-mono">13,0 GB</td>
+              <td class="col-mono cell-warn">+5,9 GB</td>
+            </tr>
+            <tr>
+              <td class="col-label">MacMini-58</td>
+              <td class="col-mono cell-accent">39,4 GB</td>
+              <td class="col-mono">6,2 GB</td>
+              <td class="col-mono cell-ok">−33,2 GB</td>
+            </tr>
+            <tr>
+              <td class="col-label">MacMini-66</td>
+              <td class="col-mono">13,9 GB</td>
+              <td class="col-mono">14,4 GB</td>
+              <td class="col-mono">+0,5 GB</td>
+            </tr>
+            <tr>
+              <td class="col-label">MacMini-74</td>
+              <td class="col-mono">11,2 GB</td>
+              <td class="col-mono">9,2 GB</td>
+              <td class="col-mono cell-ok">−2,0 GB</td>
+            </tr>
+            <tr>
+              <td class="col-label">Gennemsnit</td>
+              <td class="col-mono cell-accent">17,9 GB</td>
+              <td class="col-mono cell-accent">10,7 GB</td>
+              <td class="col-mono cell-ok">−7,2 GB</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat-block">
+          <div class="stat-num">−7 GB</div>
+          <div class="stat-label">Gns. TX-reduktion<br>per maskine/dag</div>
+        </div>
+        <div class="stat-block">
+          <div class="stat-num">−84%</div>
+          <div class="stat-label">MacMini-58<br>TX-fald</div>
+        </div>
+        <div class="stat-block">
+          <div class="stat-num">64 GB</div>
+          <div class="stat-label">Estimeret daglig<br>cache-trafik (6 mak.)</div>
+        </div>
+      </div>
+
+      <h3>MacMini-58 — det tydeligste enkeltresultat</h3>
+
+      <p>MacMini-58 er det mest dramatiske datapunkt. Samme maskine, dagen efter, med Library lokalt: TX-trafik falder fra 39,4 GB til 6,2 GB. CPU-forbrug falder fra 90,9% gennemsnit til 36,6%.</p>
+
+      <div class="callout callout-ok">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        <div class="callout-body">
+          <span class="callout-label">MacMini-58 — dag til dag</span>
+          <p><strong>25. marts (NAS Library):</strong> 39,4 GB TX · avg CPU 90,9%</p>
+          <p><strong>26. marts (Lokal Library):</strong> 6,2 GB TX · avg CPU 36,6%</p>
+          <p>Fald på 84% i netværkstrafik. Fald på 60% i CPU. Én variabel ændret.</p>
+        </div>
+      </div>
+
+      <div class="callout callout-warn">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <div class="callout-body">
+          <span class="callout-label">Metodisk forbehold</span>
+          <p>Klipperne arbejdede frit begge dage — ingen kontrol over opgave-type. MacMini-54 og MacMini-66 viser <em>højere</em> TX på den lokale dag, sandsynligvis pga. render-tunge vs. klippeintensive opgaver. To dage er et begrænset datasæt. MacMini-58 er det tydeligste signal, men det er ét datapunkt.</p>
+        </div>
+      </div>
+
+      <h3>Brugerrapporteret beachball</h3>
+
+      <p>MacMini-65 på den 25. marts loggede en markeret handling kl. 13:45: <em>"NAS — mit bib har lavet badebold igen og igen den sidste halve time, så jeg lukker ned."</em></p>
+
+      <p>Det er én observation fra én bruger. Men den er konsistent med det SQLite-dokumentationen forudsiger: FCP fryser mens det venter på at SQLite får en fsync-bekræftelse over NFS.</p>
+
+      <h3>Cache — et separat problem</h3>
+
+      <p>De ~10,7 GB TX som maskiner med <em>lokalt</em> Library stadig genererer, er formodentlig cache-trafik. FCP opretter en separat cache-mappe per Library — det betyder at seks klippere der arbejder på det samme materiale skriver seks identiske kopier af render-cache, waveforms og thumbnails til NAS.</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Cache-observation</th><th>Konsekvens</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Cache deles ikke mellem maskiner</td><td>6 klippere = 6 identiske cache-kopier på NAS</td></tr>
+            <tr><td>~10,7 GB TX per maskine/dag (lokal Library)</td><td>Ganget med 6: ~64 GB cache-trafik dagligt</td></tr>
+            <tr><td>Cache er allerede per-maskine</td><td>Naturlig kandidat til lokal placering — 1 TB NVMe er rigeligt</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout callout-neutral">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        <div class="callout-body">
+          <span class="callout-label">To separate spørgsmål</span>
+          Library-placering og cache-placering er to separate beslutninger. Det er muligt at flytte Library lokalt nu og vente med at tage stilling til cache. De to påvirker NAS-belastningen på forskellig vis.
+        </div>
+      </div>
+
+      <!-- ═══════════════ 07 RAID 6 ═══════════════ -->
+      <div class="divider">
+        <span class="divider-num">07</span>
+        <span class="divider-label">RAID &amp; storage</span>
+        <span class="divider-line"></span>
+      </div>
+
+      <h2 id="raid6">RAID 6 og write penalty</h2>
+
+      <p>Synology RS4021xs+ kører RAID 6. Det er en robust konfiguration der tåler at to diske fejler samtidig. Men robustheden kommer med en pris: write penalty.</p>
+
+      <p>For at forstå write penalty skal du vide at RAID 6 gemmer to sæt <a href="#paritet">paritetsinformation</a>. Paritet er matematisk afledte data der gør det muligt at rekonstruere mistede diske. Men for at beregne ny paritet ved en skrivning, skal RAID-controlleren først kende den gamle paritet — og for at gøre det, skal den læse de eksisterende data.</p>
+
+      <div class="diagram">
+        <svg viewBox="0 0 640 200" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="r-arr" markerWidth="7" markerHeight="7" refX="5" refY="2.5" orient="auto"><path d="M0,0 L0,5 L7,2.5 z" fill="#525252"/></marker>
+          </defs>
+          <text x="320" y="22" font-family="Geist Mono, monospace" font-size="10" fill="#525252" text-anchor="middle" letter-spacing="1" font-weight="500">RAID 6 WRITE PENALTY — ÉN LOGISK SKRIVNING</text>
+
+          <rect x="10" y="40" width="90" height="50" rx="6" fill="#fafafa" stroke="#ededed"/>
+          <text x="55" y="58" font-family="Geist Mono, monospace" font-size="9" fill="#525252" text-anchor="middle" font-weight="500">TRIN 1</text>
+          <text x="55" y="72" font-family="Geist, sans-serif" font-size="11" fill="#0a0a0a" text-anchor="middle" font-weight="500">Læs data</text>
+          <text x="55" y="84" font-family="Geist Mono, monospace" font-size="9" fill="#525252" text-anchor="middle">eksist. blok</text>
+
+          <line x1="102" y1="65" x2="118" y2="65" stroke="#525252" stroke-width="1.5" marker-end="url(#r-arr)"/>
+
+          <rect x="120" y="40" width="90" height="50" rx="6" fill="#fafafa" stroke="#ededed"/>
+          <text x="165" y="58" font-family="Geist Mono, monospace" font-size="9" fill="#525252" text-anchor="middle" font-weight="500">TRIN 2</text>
+          <text x="165" y="72" font-family="Geist, sans-serif" font-size="11" fill="#0a0a0a" text-anchor="middle" font-weight="500">Læs paritet</text>
+          <text x="165" y="84" font-family="Geist Mono, monospace" font-size="9" fill="#525252" text-anchor="middle">P + Q blokke</text>
+
+          <line x1="212" y1="65" x2="228" y2="65" stroke="#525252" stroke-width="1.5" marker-end="url(#r-arr)"/>
+
+          <rect x="230" y="40" width="90" height="50" rx="6" fill="#fafafa" stroke="#ededed"/>
+          <text x="275" y="58" font-family="Geist Mono, monospace" font-size="9" fill="#525252" text-anchor="middle" font-weight="500">TRIN 3</text>
+          <text x="275" y="72" font-family="Geist, sans-serif" font-size="11" fill="#0a0a0a" text-anchor="middle" font-weight="500">Beregn</text>
+          <text x="275" y="84" font-family="Geist Mono, monospace" font-size="9" fill="#525252" text-anchor="middle">ny paritet</text>
+
+          <line x1="322" y1="65" x2="338" y2="65" stroke="#525252" stroke-width="1.5" marker-end="url(#r-arr)"/>
+
+          <rect x="340" y="40" width="90" height="50" rx="6" fill="#fafafa" stroke="#ededed"/>
+          <text x="385" y="58" font-family="Geist Mono, monospace" font-size="9" fill="#525252" text-anchor="middle" font-weight="500">TRIN 4</text>
+          <text x="385" y="72" font-family="Geist, sans-serif" font-size="11" fill="#0a0a0a" text-anchor="middle" font-weight="500">Skriv data</text>
+          <text x="385" y="84" font-family="Geist Mono, monospace" font-size="9" fill="#525252" text-anchor="middle">ny blok</text>
+
+          <line x1="432" y1="65" x2="448" y2="65" stroke="#525252" stroke-width="1.5" marker-end="url(#r-arr)"/>
+
+          <rect x="450" y="40" width="90" height="50" rx="6" fill="#fafafa" stroke="#0a0a0a" stroke-width="1.5"/>
+          <text x="495" y="58" font-family="Geist Mono, monospace" font-size="9" fill="#0a0a0a" text-anchor="middle" font-weight="500">TRIN 5+6</text>
+          <text x="495" y="72" font-family="Geist, sans-serif" font-size="11" fill="#0a0a0a" text-anchor="middle" font-weight="500">Skriv P+Q</text>
+          <text x="495" y="84" font-family="Geist Mono, monospace" font-size="9" fill="#0a0a0a" text-anchor="middle">2 paritetsblk.</text>
+
+          <rect x="10" y="115" width="620" height="50" rx="6" fill="#fffbeb" stroke="#fde68a"/>
+          <text x="320" y="136" font-family="Geist Mono, monospace" font-size="9" fill="#78350f" text-anchor="middle" letter-spacing="1" font-weight="500">WRITE PENALTY OPSUMMERING</text>
+          <text x="320" y="154" font-family="Geist, sans-serif" font-size="12" fill="#0a0a0a" text-anchor="middle">2 læsninger + 3 skrivninger = 5–6 disk-operationer for 1 logisk skrivning fra FCP</text>
+        </svg>
+        <div class="diagram-caption"><strong>Fig. 3.</strong> RAID 6 write penalty — 5–6 disk-operationer per logisk skrivning.</div>
+      </div>
+
+      <p>SQLite-skrivninger er typisk <a href="#random-io">random I/O</a> på 4–16 KB blokke spredt tilfældigt i databasefilen. Det er det dårligste scenarie for RAID 6: mange små skrivninger, spredt over filen, der hver udløser den fulde write penalty. Store sekventielle filer — som cache-skrivninger — er meget lettere for RAID 6 at håndtere.</p>
+
+      <div class="callout callout-info">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+        <div class="callout-body">
+          <span class="callout-label">NFS-tuning hjælper ikke her</span>
+          <p>Større NFS-pakker kan reducere protokol-overhead ved sekventiel trafik — men SQLite skriver i spredte, tilfældige blokke uanset NFS-pakkestørrelse. NFS-tuning adresserer protokol-laget. Write penalty er et disk-lag-problem.</p>
+        </div>
+      </div>
+
+
+      <!-- ═══════════════ 08 HVAD VI IKKE VED ═══════════════ -->
+      <div class="divider">
+        <span class="divider-num">08</span>
+        <span class="divider-label">Åbne spørgsmål</span>
+        <span class="divider-line"></span>
+      </div>
+
+      <h2 id="hvad-vi-ikke-ved">Hvad vi ikke ved endnu</h2>
+
+      <p>FCPMonitor-data er klient-side data. Det fortæller os hvad Mac-maskinerne sender og modtager. Det fortæller os ikke hvad der sker på NAS'en. Der er fire centrale spørgsmål der kræver server-side data fra FleetManager:</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Spørgsmål</th><th>Kræver</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Er diskene flaskehalsen?</td><td>IOPS, disk-utilization, I/O-kø-dybde</td></tr>
+            <tr><td>Er det netværket?</td><td>NAS-side throughput, retransmissions</td></tr>
+            <tr><td>Er det NFS-protokollen?</td><td>NFS-ops/sek opdelt på type (fsync vs. read/write)</td></tr>
+            <tr><td>Er latency årsag eller symptom?</td><td>NFS fsync-latency korreleret med disk-utilization</td></tr>
+            <tr><td>Hvad sker der med 15 klippere?</td><td>Fuld produktionstest — vi målte 6 ud af 15</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <blockquote>
+        Klient-data kan vise mønsteret. Server-data kan forklare årsagen. Vi har mønsteret. Vi afventer årsagen.
+        <cite>Status marts 2026</cite>
+      </blockquote>
+
+      <h3>Hvad FleetManager specifikt kan levere</h3>
+
+      <p>Hvis FleetManager-data viser markant lavere disk-belastning den 26. marts (Library lokalt) sammenlignet med den 25. (Library på NAS), understøtter det klient-side observationerne på server-niveau. Hvis det ikke gør, er det en vigtig nuance der kræver yderligere undersøgelse.</p>
+
+      <p>Det nøgle-metric der kan skelne SQLite-database-workload fra medieafspilning er <strong>NFS-ops opdelt på type</strong>: hvis <code>fsync</code>-operationer dominerer frem for <code>read</code>/<code>write</code>, bekræfter det at databaseskrivninger er den primære belastningskilde.</p>
+
+      <div class="decision-list">
+        <div class="decision-row">
+          <div class="decision-key">Vi ved</div>
+          <div class="decision-val">SQLite's arkitektur er dokumenteret inkompatibel med NFS. Klient-målinger er konsistente med dette.</div>
+        </div>
+        <div class="decision-row">
+          <div class="decision-key">Vi ved ikke</div>
+          <div class="decision-val">Præcis hvilken procentdel af problemet der skyldes disk-IOPS vs. NFS-protokol vs. write penalty.</div>
+        </div>
+        <div class="decision-row">
+          <div class="decision-key">Næste skridt</div>
+          <div class="decision-val">FleetManager-data fra de to testdage. NFS fsync-latency og disk-utilization korreleret med klippernes arbejdstimer.</div>
+        </div>
+        <div class="decision-row">
+          <div class="decision-key">Konservativ anbefaling</div>
+          <div class="decision-val">Lokal Library-placering adresserer det dokumenterede SQLite/NFS-problem og reducerer NAS-belastning. Det er det sikreste skridt uanset hvad FleetManager-data viser.</div>
+        </div>
+      </div>
+
+      <!-- ═══════════════ 09 ORDBOG ═══════════════ -->
+      <div class="divider">
+        <span class="divider-num">09</span>
+        <span class="divider-label">Reference</span>
+        <span class="divider-line"></span>
+      </div>
+
+      <h2 id="ordbok">Tekniske termer forklaret</h2>
+
+      <div class="glossary-grid">
+
+        <div class="glossary-item" id="sqlite">
+          <div class="glossary-term">SQLite<span class="pronounce">es-queue-lite</span></div>
+          <div class="glossary-def">En letvægts, filbaseret relationel database. I modsætning til store databaser som PostgreSQL er der ingen separat databaseserver — applikationen taler direkte med databasefilen. Bruges som filformat af FCP, Chrome, Firefox, iOS og hundredvis af andre applikationer.</div>
+        </div>
+
+        <div class="glossary-item" id="nfs">
+          <div class="glossary-term">NFS<span class="pronounce">Network File System</span></div>
+          <div class="glossary-def">En netværksprotokol der gør det muligt at mounte et eksternt filsystem som om det var lokalt. FCP-maskiner i 100 Knive mountede NAS-drev via NFS og fik adgang til Libraries som om de lå lokalt — men hvert filsystemkald gik faktisk over netværket.</div>
+        </div>
+
+        <div class="glossary-item" id="fsync">
+          <div class="glossary-term">fsync<span class="pronounce">file synchronize</span></div>
+          <div class="glossary-def">Et systemkald der tvinger operativsystemet til at skrive alt i sin buffer til den fysiske disk og vente til det er bekræftet. SQLite bruger fsync som en kernegaranti: den bekræfter ikke en transaktion som gemt før fsync returnerer. Over NFS kræver dette en netværksrundtur til NAS-serveren.</div>
+        </div>
+
+        <div class="glossary-item" id="wal-term">
+          <div class="glossary-term">WAL<span class="pronounce">Write-Ahead Logging</span></div>
+          <div class="glossary-def">SQLite's hurtigste skrivemetode. I stedet for at ændre databasefilen direkte, skrives ændringer til en separat WAL-fil og merges periodisk ind. Kræver at alle processer deler et lille stykke RAM — hvilket er umuligt over et netværk. På NFS falder SQLite tilbage til rollback-journal.</div>
+        </div>
+
+        <div class="glossary-item" id="rollback-journal">
+          <div class="glossary-term">Rollback-journal</div>
+          <div class="glossary-def">SQLite's ældre skrivemetode. Inden en ændring foretages, gemmes den originale data i en journal-fil så ændringen kan fortrydes. Kræver to skrivninger per transaktion (journal + data) versus WAL's én skrivning. Er aktiveret som fallback når WAL ikke kan bruges (fx på NFS).</div>
+        </div>
+
+        <div class="glossary-item" id="fillaasning">
+          <div class="glossary-term">Fillåsning</div>
+          <div class="glossary-def">Mekanisme der forhindrer to processer i at skrive til en fil samtidig. SQLite bruger POSIX advisory locking via fcntl()-systemkaldet. Dokumenteret buggy på NFS-implementeringer, herunder macOS. Defekt fillåsning kan tillade samtidige skrivninger der resulterer i databasekorruption.</div>
+        </div>
+
+        <div class="glossary-item" id="client-server">
+          <div class="glossary-term">Klient/server-database</div>
+          <div class="glossary-def">Databasearkitektur hvor en separat databaseproces (server) kører et sted på netværket. Applikationen sender SQL-forespørgsler til serveren, som filtrerer og returnerer kun det relevante resultat. Velegnet til netværksbrug. PostgreSQL, MySQL og MongoDB er eksempler.</div>
+        </div>
+
+        <div class="glossary-item" id="random-io">
+          <div class="glossary-term">Random I/O</div>
+          <div class="glossary-def">Disk-adgang der hopper tilfældigt rundt i filen frem for at læse/skrive i én sammenhængende blok (sekventiel I/O). SQLite-skrivninger er typisk random I/O på 4–16 KB blokke. Roterende diske (HDD) er særlig dårlige til random I/O — antallet af operationer (IOPS) er begrænsningen, ikke datamængden.</div>
+        </div>
+
+        <div class="glossary-item" id="paritet">
+          <div class="glossary-term">Paritet (RAID)</div>
+          <div class="glossary-def">Matematisk afledt information der gemmes på dedikerede paritetsdiske i et RAID-array. Bruges til at rekonstruere data hvis en eller flere diske fejler. RAID 6 har to uafhængige paritetsberegninger og tåler at to diske fejler. Prisen er write penalty: hver skrivning kræver opdatering af begge paritetsblokke.</div>
+        </div>
+
+        <div class="glossary-item" id="iops">
+          <div class="glossary-term">IOPS<span class="pronounce">Input/Output Operations Per Second</span></div>
+          <div class="glossary-def">Antallet af læse- og skriveoperationer en lagerenhed kan udføre per sekund. Den primære begrænsning for random I/O-workloads. En moderne NVMe SSD klarer 500.000+ IOPS. En HDD klarer typisk 100–200 IOPS. SQLite's database-workload er IOPS-intensivt.</div>
+        </div>
+
+        <div class="glossary-item" id="fcpmonitor">
+          <div class="glossary-term">FCPMonitor</div>
+          <div class="glossary-def">Internt macOS-monitoreringsværktøj udviklet til Nordisk Film TV / Metronome. Overvåger kørende FCP-processer i realtid med 0,5 sekunders sample-interval. Måler netværks-TX/RX, CPU og RAM på klient-siden. Eksporterer til CSV for analyse.</div>
+        </div>
+
+        <div class="glossary-item" id="write-penalty">
+          <div class="glossary-term">Write penalty (RAID 6)</div>
+          <div class="glossary-def">Det ekstra antal disk-operationer en logisk skrivning kræver i RAID 6. En logisk skrivning kræver: 2 læsninger (eksisterende data + eksisterende paritet) + 3 skrivninger (nyt data + 2 nye paritetsblokke) = 5 disk-operationer per logisk skrivning. Fordobles effektivt antallet af IOPS ved random I/O-workloads.</div>
+        </div>
+
+      </div>
+
+      <!-- ═══════════════ 10 VIDERE LÆSNING ═══════════════ -->
+      <div class="divider">
+        <span class="divider-num">10</span>
+        <span class="divider-label">Reference</span>
+        <span class="divider-line"></span>
+      </div>
+
+      <h2 id="videre">Videre læsning</h2>
+
+      <p class="lead">Kuraterede kilder der uddyber emnet. Alle SQLite-links er til officielle dokumentationssider — direkte verificerbare.</p>
+
+      <div class="resource-list">
+
+        <a href="https://www.sqlite.org/useovernet.html" target="_blank" class="resource">
+          <div class="resource-type">SQLite docs · Primær kilde</div>
+          <div class="resource-title">SQLite Over a Network Filesystem</div>
+          <div class="resource-desc">Officiel SQLite-dokumentation om problematikken. Kilde til størstedelen af citaterne i dette kapitel. Kort, direkte, autoritative.</div>
+        </a>
+
+        <a href="https://www.sqlite.org/wal.html" target="_blank" class="resource">
+          <div class="resource-type">SQLite docs · Teknisk</div>
+          <div class="resource-title">Write-Ahead Logging</div>
+          <div class="resource-desc">Fuld dokumentation af WAL-mekanismen — herunder den eksplicitte note om at WAL ikke virker over netværksfilsystemer.</div>
+        </a>
+
+        <a href="https://www.sqlite.org/howtocorrupt.html" target="_blank" class="resource">
+          <div class="resource-type">SQLite docs · Vigtig</div>
+          <div class="resource-title">How To Corrupt an SQLite Database</div>
+          <div class="resource-desc">SQLite's officielle katalog over måder en database kan korrupteres — inkl. NFS-fillåsning. Vigtigt perspektiv på at problemet handler om integritet, ikke kun performance.</div>
+        </a>
+
+        <a href="https://www.sqlite.org/lockingv3.html" target="_blank" class="resource">
+          <div class="resource-type">SQLite docs · Teknisk</div>
+          <div class="resource-title">File Locking and Concurrency in SQLite Version 3</div>
+          <div class="resource-desc">Teknisk dybdedyk i SQLite's låsemekanismer — inkl. eksplicit note om macOS NFS-problemer.</div>
+        </a>
+
+        <a href="https://www.sqlite.org/atomiccommit.html" target="_blank" class="resource">
+          <div class="resource-type">SQLite docs · Teknisk</div>
+          <div class="resource-title">Atomic Commit in SQLite</div>
+          <div class="resource-desc">Forklarer hvordan SQLite sikrer at transaktioner enten gennemføres fuldt ud eller slet ikke — og hvilken rolle fsync spiller i den garanti.</div>
+        </a>
+
+        <a href="https://www.sqlite.org/whentouse.html" target="_blank" class="resource">
+          <div class="resource-type">SQLite docs · Praktisk</div>
+          <div class="resource-title">Appropriate Uses For SQLite</div>
+          <div class="resource-desc">Oversigt over hvornår SQLite er det rigtige valg — og hvornår en klient/server-database er bedre. Beskriver FCP's use case direkte.</div>
+        </a>
+
+      </div>
+
+      <div class="colophon">
+        <p>Vidensbank · Kapitel 03 · v1.2 · April 2026</p>
+        <p>Baseret på FCPMonitor-data fra 25.–26. marts 2026 (100 Knive) og officiel SQLite-dokumentation</p>
+        <p>Foreløbig rapport — afventer FleetManager-data</p>
+        <p>Beregnet til intern brug · Metronome / Nordisk Film TV · Post-production</p>
+      </div>
+
+      <div class="chapter-footer">
+        <div class="chapter-footer-nav">
+          <a href="index.html">← Tilbage til forsiden</a>
+        </div>
+        <div class="chapter-footer-meta">
+          KAPITEL 03 · v1.2 · APRIL 2026
+        </div>
+      </div>
+
+    </main>
+
+  </div>
+
+</div>
+
+<script>
+  const progress = document.getElementById('progress');
+  window.addEventListener('scroll', () => {
+    const h = document.documentElement;
+    const pct = (h.scrollTop / (h.scrollHeight - h.clientHeight)) * 100;
+    progress.style.width = pct + '%';
+  });
+
+  const sections = document.querySelectorAll('main h2[id]');
+  const tocLinks = document.querySelectorAll('.toc a');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const id = entry.target.getAttribute('id');
+        tocLinks.forEach(link => {
+          link.classList.toggle('active', link.getAttribute('href') === '#' + id);
+        });
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+  sections.forEach(s => observer.observe(s));
+</script>
+
+</body>
+</html>

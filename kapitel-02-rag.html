@@ -1,0 +1,1822 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kapitel 01 — Visuelle embeddings &amp; VisualScanner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #0a0a0a;
+    --ink-2: #262626;
+    --ink-3: #525252;
+    --ink-4: #a3a3a3;
+    --line: #ededed;
+    --line-2: #f5f5f5;
+    --bg: #ffffff;
+    --tint: #fafafa;
+    --signal: #0ea5e9;
+    --paper-bg: #f0f0ee;
+
+    --info-bg: #f0f9ff;
+    --info-border: #bae6fd;
+    --info-ink: #0c4a6e;
+
+    --warn-bg: #fffbeb;
+    --warn-border: #fde68a;
+    --warn-ink: #78350f;
+
+    --ok-bg: #f0fdf4;
+    --ok-border: #bbf7d0;
+    --ok-ink: #14532d;
+
+    --code-bg: #fafafa;
+    --code-border: #ededed;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; scroll-padding-top: 24px; }
+
+  body {
+    background: var(--paper-bg);
+    color: var(--ink);
+    font-family: 'Geist', -apple-system, sans-serif;
+    font-weight: 400;
+    -webkit-font-smoothing: antialiased;
+    font-feature-settings: 'ss01', 'cv11';
+    min-height: 100vh;
+  }
+
+  .mono { font-family: 'Geist Mono', ui-monospace, monospace; }
+
+  /* PROGRESS */
+  #progress {
+    position: fixed; top: 0; left: 0;
+    height: 2px; background: var(--ink);
+    z-index: 1000; width: 0;
+    transition: width 0.1s ease-out;
+  }
+
+  /* SHEET */
+  .sheet {
+    max-width: 1120px;
+    margin: 32px auto;
+    background: var(--bg);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 10px 40px rgba(0,0,0,0.06);
+    position: relative;
+  }
+
+  /* TOPBAR */
+  .topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 48px;
+    border-bottom: 1px solid var(--line);
+    font-size: 10px;
+    letter-spacing: 0.02em;
+  }
+  .topbar-left { display: flex; align-items: center; gap: 10px; color: var(--ink-3); }
+  .logo-dot {
+    width: 8px; height: 8px;
+    background: var(--ink); border-radius: 50%;
+    position: relative;
+  }
+  .logo-dot::after {
+    content: ''; position: absolute; inset: -3px;
+    border: 1px solid var(--ink); border-radius: 50%;
+    opacity: 0.2;
+  }
+  .topbar-right a {
+    color: var(--ink-3); text-decoration: none;
+    font-family: 'Geist Mono', monospace; font-size: 10px;
+    transition: color 0.15s;
+  }
+  .topbar-right a:hover { color: var(--ink); }
+
+  /* LAYOUT */
+  .layout {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+  }
+
+  /* TOC */
+  .toc {
+    position: sticky;
+    top: 0;
+    align-self: start;
+    height: 100vh;
+    overflow-y: auto;
+    padding: 48px 20px 40px 48px;
+    border-right: 1px solid var(--line);
+  }
+  .toc::-webkit-scrollbar { width: 4px; }
+  .toc::-webkit-scrollbar-thumb { background: var(--line); border-radius: 2px; }
+
+  .toc-label {
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px; font-weight: 500;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--ink-4); margin-bottom: 18px;
+  }
+
+  .toc ol { list-style: none; counter-reset: toc; }
+  .toc li { counter-increment: toc; }
+
+  .toc a {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 5px 10px 5px 10px;
+    margin-left: -10px;
+    font-size: 12.5px;
+    line-height: 1.35;
+    color: var(--ink-3);
+    text-decoration: none;
+    transition: color 0.15s;
+    border-left: 2px solid transparent;
+  }
+  .toc a::before {
+    content: counter(toc, decimal-leading-zero);
+    font-family: 'Geist Mono', monospace;
+    font-size: 9.5px;
+    color: var(--ink-4);
+    flex-shrink: 0;
+    padding-top: 1px;
+  }
+  .toc a:hover { color: var(--ink); }
+  .toc a.active {
+    color: var(--ink);
+    border-left-color: var(--ink);
+  }
+
+  /* MAIN */
+  main {
+    padding: 48px 64px 64px 64px;
+    max-width: 760px;
+  }
+
+  /* HERO */
+  .chapter-hero {
+    padding-bottom: 40px;
+    margin-bottom: 40px;
+    border-bottom: 1px solid var(--line);
+  }
+  .chapter-hero-meta {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 28px;
+  }
+  .chapter-badge {
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px; font-weight: 500;
+    letter-spacing: 0.04em; text-transform: uppercase;
+    color: var(--ink-3);
+    padding: 5px 9px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+  }
+  .chapter-time {
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px; color: var(--ink-4);
+    letter-spacing: 0.02em;
+  }
+  h1 {
+    font-family: 'Geist', sans-serif;
+    font-weight: 500; font-size: 42px;
+    line-height: 1.05;
+    letter-spacing: -0.035em;
+    color: var(--ink); margin-bottom: 20px;
+  }
+  h1 .dim { color: var(--ink-4); font-weight: 400; }
+  .chapter-lede {
+    font-size: 17px; line-height: 1.55;
+    color: var(--ink-2);
+    letter-spacing: -0.01em;
+  }
+  .hero-meta-row {
+    display: flex; gap: 32px; margin-top: 28px; flex-wrap: wrap;
+  }
+  .hero-meta-item {
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px; color: var(--ink-4);
+    text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .hero-meta-item strong {
+    display: block;
+    font-family: 'Geist', sans-serif;
+    font-size: 13px; color: var(--ink);
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: -0.01em;
+    margin-top: 4px;
+  }
+
+  /* SECTION DIVIDERS */
+  .divider {
+    display: flex; align-items: center; gap: 12px;
+    margin: 56px 0 24px 0;
+  }
+  .divider:first-child { margin-top: 0; }
+  .divider-num {
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px; color: var(--ink-4);
+  }
+  .divider-label {
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px; font-weight: 500;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--ink-3); white-space: nowrap;
+  }
+  .divider-line { flex: 1; height: 1px; background: var(--line); }
+
+  /* TYPOGRAPHY */
+  h2 {
+    font-family: 'Geist', sans-serif;
+    font-weight: 500; font-size: 26px;
+    line-height: 1.2;
+    letter-spacing: -0.025em;
+    color: var(--ink);
+    margin: 0 0 18px 0;
+    scroll-margin-top: 24px;
+  }
+  h3 {
+    font-family: 'Geist', sans-serif;
+    font-weight: 500; font-size: 17px;
+    line-height: 1.3;
+    letter-spacing: -0.015em;
+    color: var(--ink);
+    margin: 32px 0 12px 0;
+  }
+  h4 {
+    font-family: 'Geist Mono', monospace;
+    font-weight: 500; font-size: 11px;
+    letter-spacing: 0.05em; text-transform: uppercase;
+    color: var(--ink-3);
+    margin: 28px 0 10px 0;
+  }
+
+  main p {
+    font-size: 15px; line-height: 1.7;
+    color: var(--ink-2);
+    letter-spacing: -0.005em;
+    margin-bottom: 16px;
+  }
+  main p strong { color: var(--ink); font-weight: 500; }
+  main p em { font-style: italic; color: var(--ink); }
+
+  main p.lead {
+    font-size: 17px;
+    color: var(--ink);
+    margin-bottom: 22px;
+  }
+
+  main a {
+    color: var(--ink);
+    text-decoration: underline;
+    text-decoration-color: var(--ink-4);
+    text-underline-offset: 3px;
+    transition: text-decoration-color 0.15s;
+  }
+  main a:hover { text-decoration-color: var(--ink); }
+
+  main code {
+    font-family: 'Geist Mono', monospace;
+    font-size: 13px;
+    padding: 2px 6px;
+    background: var(--code-bg);
+    border: 1px solid var(--code-border);
+    border-radius: 4px;
+    color: var(--ink);
+  }
+
+  /* LISTS */
+  main ul, main ol {
+    margin: 0 0 20px 0;
+    padding-left: 0;
+    list-style: none;
+  }
+  main ul li, main ol li {
+    position: relative;
+    padding-left: 24px;
+    font-size: 15px; line-height: 1.7;
+    color: var(--ink-2);
+    margin-bottom: 8px;
+    letter-spacing: -0.005em;
+  }
+  main ul li strong, main ol li strong { color: var(--ink); font-weight: 500; }
+  main ul li::before {
+    content: '';
+    position: absolute; left: 8px; top: 12px;
+    width: 4px; height: 4px;
+    background: var(--ink-3); border-radius: 50%;
+  }
+  main ol { counter-reset: listnum; }
+  main ol li { counter-increment: listnum; }
+  main ol li::before {
+    content: counter(listnum, decimal-leading-zero);
+    position: absolute; left: 0; top: 0;
+    font-family: 'Geist Mono', monospace;
+    font-size: 11px; color: var(--ink-4);
+  }
+
+  /* BLOCKQUOTE / INSIGHT */
+  main blockquote, .insight {
+    margin: 28px 0;
+    padding: 4px 0 4px 24px;
+    border-left: 2px solid var(--ink);
+    font-family: 'Geist', sans-serif;
+    font-size: 18px;
+    line-height: 1.5;
+    color: var(--ink);
+    letter-spacing: -0.015em;
+    font-weight: 400;
+  }
+  main blockquote cite, .insight cite {
+    display: block;
+    margin-top: 12px;
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px;
+    color: var(--ink-4);
+    font-style: normal;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  /* CODE BLOCKS */
+  pre {
+    margin: 20px 0;
+    padding: 18px 20px;
+    background: var(--code-bg);
+    border: 1px solid var(--code-border);
+    border-radius: 8px;
+    overflow-x: auto;
+    font-family: 'Geist Mono', monospace;
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: var(--ink-2);
+  }
+  pre code {
+    padding: 0; background: none; border: none;
+    font-size: inherit; color: inherit;
+  }
+
+  /* CALLOUTS */
+  .callout {
+    margin: 24px 0;
+    padding: 16px 20px;
+    border-radius: 8px;
+    border: 1px solid;
+    display: flex; gap: 14px;
+    align-items: flex-start;
+  }
+  .callout-icon {
+    flex-shrink: 0;
+    width: 16px; height: 16px;
+    margin-top: 2px;
+  }
+  .callout-body {
+    font-size: 13.5px; line-height: 1.6;
+    letter-spacing: -0.005em;
+    flex: 1;
+  }
+  .callout-body strong { font-weight: 500; }
+  .callout-body p { font-size: inherit; line-height: inherit; color: inherit; margin-bottom: 10px; }
+  .callout-body p:last-child { margin-bottom: 0; }
+  .callout-body ul li, .callout-body ol li {
+    font-size: 13.5px; color: inherit;
+  }
+  .callout-body ul li::before { background: currentColor; opacity: 0.7; }
+  .callout-label {
+    display: block;
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    margin-bottom: 4px; font-weight: 500;
+  }
+  .callout-info {
+    background: var(--info-bg); border-color: var(--info-border); color: var(--info-ink);
+  }
+  .callout-info .callout-icon { color: #0284c7; }
+  .callout-info code { background: rgba(255,255,255,0.6); border-color: var(--info-border); }
+  .callout-warn {
+    background: var(--warn-bg); border-color: var(--warn-border); color: var(--warn-ink);
+  }
+  .callout-warn .callout-icon { color: #d97706; }
+  .callout-warn code { background: rgba(255,255,255,0.6); border-color: var(--warn-border); }
+  .callout-ok {
+    background: var(--ok-bg); border-color: var(--ok-border); color: var(--ok-ink);
+  }
+  .callout-ok .callout-icon { color: #16a34a; }
+  .callout-ok code { background: rgba(255,255,255,0.6); border-color: var(--ok-border); }
+
+  /* NEUTRAL CALLOUT (Udforsk videre / Sådan læses den) */
+  .callout-neutral {
+    background: var(--tint);
+    border-color: var(--line);
+    color: var(--ink-2);
+  }
+  .callout-neutral .callout-icon { color: var(--ink-3); }
+  .callout-neutral .callout-label { color: var(--ink-3); }
+
+  /* TABLES */
+  .table-wrap {
+    margin: 24px 0;
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  thead { background: var(--tint); }
+  th {
+    text-align: left;
+    padding: 11px 16px;
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px; font-weight: 500;
+    letter-spacing: 0.05em; text-transform: uppercase;
+    color: var(--ink-3);
+    border-bottom: 1px solid var(--line);
+  }
+  td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--line-2);
+    color: var(--ink-2);
+    line-height: 1.55;
+    vertical-align: top;
+  }
+  tr:last-child td { border-bottom: none; }
+  td.col-label {
+    font-weight: 500;
+    color: var(--ink);
+    white-space: nowrap;
+  }
+  td.col-mono {
+    font-family: 'Geist Mono', monospace;
+    font-size: 12px;
+  }
+  td.col-hit { color: var(--ok-ink); }
+  td.col-miss { color: var(--ink-4); }
+  td.col-best {
+    font-weight: 500;
+    color: var(--ink);
+  }
+
+  /* DIAGRAM (figure with SVG inside) */
+  .diagram {
+    margin: 28px 0;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--bg);
+  }
+  .diagram svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    background: var(--tint);
+  }
+  .diagram-caption {
+    padding: 12px 18px;
+    font-family: 'Geist Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-3);
+    letter-spacing: 0.02em;
+    border-top: 1px solid var(--line);
+  }
+  .diagram-caption strong { color: var(--ink); font-weight: 500; margin-right: 8px; }
+
+  /* DETAILS / DYK DYBERE */
+  details.deep-dive {
+    margin: 24px 0;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--bg);
+    overflow: hidden;
+  }
+  details.deep-dive summary {
+    padding: 14px 18px;
+    font-family: 'Geist Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+    cursor: pointer;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: background 0.15s;
+  }
+  details.deep-dive summary::-webkit-details-marker { display: none; }
+  details.deep-dive summary::before {
+    content: '+';
+    font-family: 'Geist Mono', monospace;
+    font-weight: 500;
+    color: var(--ink-3);
+    font-size: 14px;
+    transition: transform 0.2s;
+  }
+  details.deep-dive[open] summary::before { content: '−'; }
+  details.deep-dive summary:hover { background: var(--tint); }
+  .deep-content {
+    padding: 4px 18px 18px 18px;
+    border-top: 1px solid var(--line);
+    background: var(--tint);
+  }
+  .deep-content p {
+    font-size: 14px;
+    line-height: 1.65;
+    color: var(--ink-2);
+    margin-bottom: 12px;
+  }
+  .deep-content p:last-child { margin-bottom: 0; }
+
+  /* DECISION LIST */
+  .decision-list {
+    margin: 28px 0;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .decision-row {
+    display: grid;
+    grid-template-columns: 160px 1fr;
+    border-bottom: 1px solid var(--line-2);
+  }
+  .decision-row:last-child { border-bottom: none; }
+  .decision-key {
+    padding: 16px 18px;
+    background: var(--tint);
+    border-right: 1px solid var(--line);
+    font-family: 'Geist Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .decision-val {
+    padding: 16px 20px;
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--ink-2);
+  }
+  .decision-val strong {
+    display: block;
+    color: var(--ink);
+    font-weight: 500;
+    margin-bottom: 4px;
+  }
+
+  /* SCORE LADDER */
+  .score-ladder {
+    margin: 24px 0;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .score-row {
+    display: grid;
+    grid-template-columns: 110px 1fr;
+    border-bottom: 1px solid var(--line-2);
+  }
+  .score-row:last-child { border-bottom: none; }
+  .score-range {
+    padding: 16px 18px;
+    background: var(--tint);
+    border-right: 1px solid var(--line);
+    font-family: 'Geist Mono', monospace;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+  }
+  .score-row.strong .score-range { color: var(--ok-ink); background: var(--ok-bg); border-right-color: var(--ok-border); }
+  .score-row.ok .score-range { color: var(--ink-2); }
+  .score-row.weak .score-range { color: var(--warn-ink); background: var(--warn-bg); border-right-color: var(--warn-border); }
+  .score-row.noise .score-range { color: var(--ink-4); }
+  .score-desc {
+    padding: 16px 20px;
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--ink-2);
+  }
+  .score-desc strong {
+    display: block;
+    color: var(--ink);
+    font-weight: 500;
+    margin-bottom: 4px;
+  }
+
+  /* GLOSSARY */
+  .glossary-grid {
+    display: grid;
+    gap: 16px;
+    margin: 24px 0;
+  }
+  .glossary-item {
+    padding: 16px 18px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--bg);
+    scroll-margin-top: 24px;
+  }
+  .glossary-term {
+    font-family: 'Geist', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--ink);
+    margin-bottom: 6px;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    letter-spacing: -0.01em;
+  }
+  .pronounce {
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px;
+    font-weight: 400;
+    color: var(--ink-4);
+    letter-spacing: 0.02em;
+  }
+  .glossary-def {
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: var(--ink-2);
+    letter-spacing: -0.005em;
+  }
+
+  /* RESOURCE LIST */
+  .resource-list {
+    display: grid;
+    gap: 10px;
+    margin: 24px 0;
+  }
+  .resource {
+    display: block;
+    padding: 16px 18px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--bg);
+    text-decoration: none !important;
+    color: inherit;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .resource:hover {
+    border-color: var(--ink-3);
+    background: var(--tint);
+  }
+  .resource-type {
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px;
+    color: var(--ink-4);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .resource-title {
+    font-family: 'Geist', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--ink);
+    margin-bottom: 4px;
+    letter-spacing: -0.01em;
+  }
+  .resource-desc {
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: var(--ink-3);
+    letter-spacing: -0.005em;
+  }
+
+  /* COLOPHON */
+  .colophon {
+    margin-top: 40px;
+    padding: 18px 20px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--tint);
+  }
+  .colophon p {
+    font-family: 'Geist Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-3);
+    margin-bottom: 4px;
+    letter-spacing: 0.02em;
+  }
+
+  /* CHAPTER FOOTER */
+  .chapter-footer {
+    margin-top: 72px;
+    padding-top: 32px;
+    border-top: 1px solid var(--line);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+  .chapter-footer-nav {
+    font-family: 'Geist Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-3);
+    letter-spacing: 0.02em;
+  }
+  .chapter-footer-nav a {
+    color: var(--ink);
+    text-decoration: none;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 2px;
+    transition: border-color 0.15s;
+  }
+  .chapter-footer-nav a:hover { border-bottom-color: var(--ink); }
+  .chapter-footer-meta {
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px;
+    color: var(--ink-4);
+    letter-spacing: 0.02em;
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 980px) {
+    .sheet { margin: 16px; }
+    .layout { grid-template-columns: 1fr; }
+    .toc {
+      position: static; height: auto;
+      border-right: none;
+      border-bottom: 1px solid var(--line);
+      padding: 32px 32px 24px;
+    }
+    .topbar { padding: 16px 32px; }
+    main { padding: 32px; max-width: none; }
+    h1 { font-size: 32px; }
+    h2 { font-size: 22px; }
+    .decision-row, .score-row { grid-template-columns: 1fr; }
+    .decision-key, .score-range {
+      border-right: none;
+      border-bottom: 1px solid var(--line);
+    }
+  }
+
+  /* TOKEN VIZ */
+  .token-viz {
+    margin: 24px 0;
+    padding: 20px 22px;
+    background: var(--tint);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--ink-2);
+  }
+  .token-viz em {
+    font-style: italic;
+    color: var(--ink);
+  }
+  .tok {
+    display: inline-block;
+    padding: 3px 7px;
+    margin: 2px 1px;
+    border-radius: 4px;
+    font-family: 'Geist Mono', monospace;
+    font-size: 12.5px;
+    background: #e0e7ff;
+    color: #1e40af;
+    border: 1px solid #c7d2fe;
+  }
+  .tok.alt {
+    background: #fef3c7;
+    color: #78350f;
+    border-color: #fde68a;
+  }
+
+  /* PROMPT EXAMPLE */
+  .prompt-example {
+    margin: 24px 0;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--bg);
+  }
+  .prompt-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 16px;
+    background: var(--tint);
+    border-bottom: 1px solid var(--line);
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px;
+    color: var(--ink-3);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .prompt-body {
+    padding: 18px 20px;
+    font-family: 'Geist Mono', monospace;
+    font-size: 12.5px;
+    line-height: 1.65;
+    color: var(--ink-2);
+    white-space: pre-wrap;
+    overflow-x: auto;
+  }
+  .prompt-body .ph {
+    color: var(--ink);
+    font-weight: 600;
+  }
+  .prompt-body .label {
+    color: var(--ink-4);
+    font-style: italic;
+  }
+</style>
+</head>
+<body>
+
+<div id="progress"></div>
+
+<div class="sheet">
+
+  <header class="topbar">
+    <div class="topbar-left">
+      <div class="logo-dot"></div>
+      <span class="mono">RYAN VELIN · VIDENSBANK</span>
+    </div>
+    <div class="topbar-right">
+      <a href="index.html">← FORSIDE</a>
+    </div>
+  </header>
+
+  <div class="layout">
+
+    <aside class="toc">
+      <div class="toc-label">Indhold</div>
+      <ol>
+        <li><a href="#intro">Forord</a></li>
+        <li><a href="#problemet">Det grundlæggende problem</a></li>
+        <li><a href="#tokens">Hvad er tokens?</a></li>
+        <li><a href="#context-window">Context window</a></li>
+        <li><a href="#text-embeddings">Tekst-embeddings</a></li>
+        <li><a href="#chunking">Chunking</a></li>
+        <li><a href="#rag-pipelinen">RAG-pipelinen</a></li>
+        <li><a href="#interview-navigator">Eksempel: InterviewNavigator</a></li>
+        <li><a href="#vector-databases">Vector databases</a></li>
+        <li><a href="#hybrid-rerank">Hybrid søgning &amp; reranking</a></li>
+        <li><a href="#alternativer">RAG vs alternativerne</a></li>
+        <li><a href="#dashboard">Til Dashboard</a></li>
+        <li><a href="#ordbog">Ordbog</a></li>
+        <li><a href="#videre">Videre læsning</a></li>
+      </ol>
+    </aside>
+
+    <main>
+
+      <div class="chapter-hero">
+        <div class="chapter-hero-meta">
+          <span class="chapter-badge">Kapitel 02</span>
+          <span class="chapter-time">~ 30 min læsetid</span>
+        </div>
+        <h1>Hvordan LLM'er navigerer<br><span class="dim">i tekst de aldrig har læst.</span></h1>
+        <p class="chapter-lede">
+          En guide til tokens, context windows, RAG (Retrieval Augmented Generation), og hvordan dine egne tekstmasser kan blive søgbare som dem du allerede har gjort med video. Bygger oven på Kapitel 01.
+        </p>
+        <div class="hero-meta-row">
+          <div class="hero-meta-item">Læsetid<strong>~ 30 min</strong></div>
+          <div class="hero-meta-item">Forudsætninger<strong>Kapitel 01 (anbefalet)</strong></div>
+          <div class="hero-meta-item">Niveau<strong>Begynder → Teknisk</strong></div>
+        </div>
+      </div>
+
+      <!-- ═══════════════ 00 FORORD ═══════════════ -->
+      <div class="divider">
+        <span class="divider-num">00</span>
+        <span class="divider-label">Forord</span>
+        <span class="divider-line"></span>
+      </div>
+
+      <h2 id="intro">Hvad denne handler om</h2>
+
+      <p class="lead">Du spurgte om LLM'er bruger samme princip som videoscannings-modeller til at navigere store tekstmængder uden at brænde tokens af. Svaret er ja — og det er det vi går igennem her.</p>
+
+      <p>Det er det samme grundprincip som i Kapitel 01: <strong>oversæt indhold til vektorer, sammenlign med cosine similarity, find de relevante stykker</strong>. Men der er nogle nye begreber undervejs — <a href="#token">tokens</a>, <a href="#context-window-glos">context window</a>, <a href="#chunking-glos">chunking</a>, <a href="#rag">RAG</a> — som det er værd at forstå før vi bygger noget i Dashboard.</p>
+
+      <p>Du har faktisk allerede en levende RAG-implementering i din egen kode-base: <strong>InterviewNavigator</strong>. Vi vender tilbage til den som konkret eksempel undervejs.</p>
+
+      <div class="callout callout-neutral">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+        <div class="callout-body">
+          <span class="callout-label">Sådan læses den</span>
+          Samme principper som Kapitel 01: links hopper til ordbogen, "Dyk dybere" foldes ud når du vil have detaljerne, "Udforsk videre" er sidespor du kan følge hvis du har lyst. Sektionerne er selvstændige — du kan hoppe direkte til <a href="#rag-pipelinen">RAG-pipelinen</a> hvis du allerede kender baggrunden.
+        </div>
+      </div>
+
+      <!-- ═══════════════ 01 PROBLEMET ═══════════════ -->
+      <div class="divider">
+        <span class="divider-num">01</span>
+        <span class="divider-label">Udgangspunktet</span>
+        <span class="divider-line"></span>
+      </div>
+
+      <h2 id="problemet">Det grundlæggende problem</h2>
+
+      <p>Forestil dig at du har 500 transskriptioner — måske 5 millioner ord i alt — og du vil stille en LLM et spørgsmål: <em>"Hvad sagde respondenterne om bæredygtighed?"</em></p>
+
+      <p>Den naive tilgang ville være: send alle 500 transskriptioner til LLM'en sammen med spørgsmålet, og lad den læse igennem. Problemet er trefoldigt:</p>
+
+      <ol>
+        <li>Det <strong>passer ikke</strong> i modellens hukommelse — den har et øvre loft for hvor meget tekst den kan håndtere ad gangen</li>
+        <li>Selv hvis det passede, ville det <strong>koste en formue</strong> — du betaler per token både ind og ud</li>
+        <li>Selv hvis du betalte, ville svaret være <strong>mærkbart dårligere</strong> — modeller bliver upræcise når de skal forholde sig til enorme mængder data, og overser ofte detaljer i midten</li>
+      </ol>
+
+      <p>Det her er den <em>kernebegrænsning</em> al moderne LLM-arkitektur skal arbejde indenfor. Og det er det RAG løser — ved at sørge for at LLM'en kun ser de stykker der faktisk er relevante for spørgsmålet.</p>
+
+      <blockquote>
+        Den bedste løsning er ikke at give modellen alt. Det er at give den lige præcis det rigtige.
+        <cite>Princippet bag RAG</cite>
+      </blockquote>
+
+      <!-- ═══════════════ 02 TOKENS ═══════════════ -->
+      <div class="divider">
+        <span class="divider-num">02</span>
+        <span class="divider-label">Den nye valuta</span>
+        <span class="divider-line"></span>
+      </div>
+
+      <h2 id="tokens">Hvad er tokens?</h2>
+
+      <p class="lead">Et token er den mindste enhed en LLM arbejder med. Det er hverken et bogstav eller et ord — det er et stykke tekst af variabel størrelse, typisk 3–5 tegn på engelsk og lidt færre på dansk.</p>
+
+      <p>Når du sender tekst til en LLM, deler modellen den først op i tokens. Det er den proces der hedder <strong>tokenisering</strong>. Modellen "tænker" i tokens, ikke i ord. Alt prissætning, alt loftsmåling, al hastighed handler om tokens.</p>
+
+      <h4>Eksempel: tekst opdelt i tokens</h4>
+
+      <div class="token-viz">
+        Sætningen <em>"Ryan arbejder på Metronome i København"</em> bliver til:
+        <br><br>
+        <span class="tok">Ryan</span><span class="tok alt"> arbej</span><span class="tok">der</span><span class="tok alt"> på</span><span class="tok"> Metr</span><span class="tok alt">onome</span><span class="tok"> i</span><span class="tok alt"> Køben</span><span class="tok">havn</span>
+        <br><br>
+        9 tokens · 6 ord · 39 tegn
+      </div>
+
+      <p>Bemærk hvordan "København" deles i to (Køben + havn) og "Metronome" også (Metr + onome). Det er fordi modellen er trænet primært på engelsk, og danske ord ofte mangler som "hele" tokens i dens vokabular. Det er en af grundene til at <strong>dansk koster flere tokens per tekst end engelsk</strong> — typisk 30–50% mere.</p>
+
+      <h3>Hvorfor tokens, og ikke ord?</h3>
+
+      <p>Det er en effektivitets-afvejning. Tokens fanger mønstre der er fælles på tværs af sprog: prefikser, suffikser, hyppige bogstavkombinationer. "arbejder", "spiser", "løber" deler suffikset "-er", som modellen kan lære som ét token og dermed bruge på utallige verber. Det giver et kompakt, fleksibelt sprog modellen kan operere i.</p>
+
+      <h3>Hvorfor det betyder noget for dig</h3>
+
+      <p>Alt i LLM-økonomien måles i tokens:</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Aspekt</th><th>Hvordan tokens spiller ind</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="col-label">Pris</td><td>Du betaler per million tokens, både ind (prompt) og ud (svar). Output er typisk 3–5× dyrere end input.</td></tr>
+            <tr><td class="col-label">Hastighed</td><td>LLM'er genererer ét token ad gangen. Et 500-ord-svar betyder ~700 tokens at producere — det er hvad der bestemmer hvor "hurtigt" svaret kommer.</td></tr>
+            <tr><td class="col-label">Loft</td><td>Hver model har et maksimum (context window). Sender du for meget tekst, afviser modellen anmodningen.</td></tr>
+            <tr><td class="col-label">Kvalitet</td><td>Selv inden for loftet bliver svar dårligere jo mere tekst der er. Mindre kontekst = mere fokuseret svar.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <details class="deep-dive">
+        <summary>Dyk dybere — tommelfingerregler for token-estimering</summary>
+        <div class="deep-content">
+          <p>Hvis du vil overslå hvad en tekst koster, uden at bruge en tokenizer:</p>
+          <ul>
+            <li><strong>Engelsk:</strong> ~1 token per 4 tegn, eller ~0.75 tokens per ord</li>
+            <li><strong>Dansk:</strong> ~1 token per 3 tegn, eller ~1.0–1.2 tokens per ord</li>
+            <li><strong>Kode:</strong> meget variabelt, men typisk ~1 token per 3 tegn</li>
+            <li><strong>JSON/strukturerede data:</strong> dyrere end tilsvarende prosa pga. mange tegn til struktur</li>
+          </ul>
+          <p>For præcis måling kan du bruge OpenAI's <a href="https://platform.openai.com/tokenizer" target="_blank">tokenizer-værktøj</a> online, eller Anthropics counting-API.</p>
+        </div>
+      </details>
+
+      <!-- ═══════════════ 03 CONTEXT WINDOW ═══════════════ -->
+      <div class="divider">
+        <span class="divider-num">03</span>
+        <span class="divider-label">Loftet</span>
+        <span class="divider-line"></span>
+      </div>
+
+      <h2 id="context-window">Context window</h2>
+
+      <p class="lead">Context window er den mængde tokens en LLM kan håndtere i én anmodning. Både dit input <em>og</em> dens svar skal passe ind under loftet.</p>
+
+      <p>Det er den fysiske begrænsning RAG arbejder rundt om. Tænk på det som korttidshukommelse — alt modellen "ved" lige nu skal være i context window'et. Den har ikke adgang til andet.</p>
+
+      <h3>Størrelser i 2026</h3>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Model</th><th>Context window</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="col-label">GPT-4o-mini</td><td>128K tokens (~96.000 ord — en kort roman)</td></tr>
+            <tr><td class="col-label">Claude Sonnet 4.6</td><td>200K tokens (~150.000 ord — en lang roman)</td></tr>
+            <tr><td class="col-label">Gemini 1.5 Pro</td><td>2M tokens (~1.5 millioner ord — flere bøger)</td></tr>
+            <tr><td class="col-label">Til perspektiv</td><td>Bibelen er ~750.000 tokens. En enkelt undersøgelse-rapport er ~30.000.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>Det lyder som meget. Og det er det også, sammenlignet med hvor små vinduerne var for to år siden (4K, 8K, 16K). Men den vigtige indsigt: <strong>større context window er ikke en erstatning for RAG</strong>. Tre grunde:</p>
+
+      <ol>
+        <li><strong>Kvalitet falder</strong>. Forskning viser at modeller bliver mindre præcise jo mere kontekst de får — særligt for information der ligger i midten af en lang prompt ("lost in the middle"-fænomenet).</li>
+        <li><strong>Pris stiger lineært</strong>. Sender du 100K tokens hver gang du stiller et spørgsmål, betaler du for 100K tokens hver gang. RAG sender måske 5K relevante tokens — 20× billigere.</li>
+        <li><strong>Latens stiger</strong>. Større prompts er langsommere at processere. RAG-svar kommer hurtigere fordi mindre tekst skal læses.</li>
+      </ol>
+
+      <div class="callout callout-info">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+        <div class="callout-body">
+          <span class="callout-label">Den vigtige konsekvens</span>
+          <p>Selv hvis du kunne sende alt til modellen, vil du oftest <em>ikke</em> have det. Den bedste arkitektur er stadig: find det relevante først, send kun det, lad modellen arbejde fokuseret på det.</p>
+        </div>
+      </div>
+
+      <!-- ═══════════════ 04 TEXT EMBEDDINGS ═══════════════ -->
+      <div class="divider">
+        <span class="divider-num">04</span>
+        <span class="divider-label">Det velkendte princip</span>
+        <span class="divider-line"></span>
+      </div>
+
+      <h2 id="text-embeddings">Tekst-embeddings</h2>
+
+      <p class="lead">Her vender vi tilbage til præcis det vi lærte i Kapitel 01. Tekst-embeddings fungerer akkurat som billede-embeddings — de oversætter tekst til vektorer i et matematisk rum hvor lighed kan måles.</p>
+
+      <p>Den eneste forskel er encoderen. I VisualScanner sender du frames gennem en image encoder. Her sender du tekst gennem en <strong>text encoder</strong>. Resten — vektor, cosine similarity, "ens ting peger samme vej" — er fuldstændig identisk.</p>
+
+      <h3>Modeller du kan bruge</h3>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Model</th><th>Karakter</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="col-label col-mono">text-embedding-3-small</td><td>OpenAI's mest brugte. 1536-dim. Billig (~$0.02/1M tokens). Dækker alle vigtige sprog inklusive dansk. Det er den InterviewNavigator bruger.</td></tr>
+            <tr><td class="col-label col-mono">text-embedding-3-large</td><td>OpenAI's største. 3072-dim. Bedre præcision men dyrere og langsommere. Sjældent værd det medmindre præcision er kritisk.</td></tr>
+            <tr><td class="col-label col-mono">multilingual-e5-large</td><td>Open-source fra Microsoft. Køres lokalt (ingen API-kald). Stærk på flersprog inklusive dansk. God hvis du vil holde alt internt.</td></tr>
+            <tr><td class="col-label col-mono">all-MiniLM-L6-v2</td><td>Den lille open-source workhorse. 384-dim, lille, hurtig. Engelsk-fokuseret. Godt til prototyping.</td></tr>
+            <tr><td class="col-label col-mono">VAMLTextEncoder</td><td>Apples egen, indbygget i Final Cut Pro. CLIP-baseret CoreML, 512-dim. Kun engelsk. Drives af FCP's egen transcript-søgning.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>Du har allerede taget valget for InterviewNavigator: <code>text-embedding-3-small</code>. Det er et godt default — billigt, hurtigt, tilstrækkeligt præcist, multilingual.</p>
+
+      <div class="callout callout-neutral">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        <div class="callout-body">
+          <span class="callout-label">Udforsk videre</span>
+          Hvis du på sigt vil have alt lokalt (ingen cloud-kald) er <strong>multilingual-e5-large</strong> det rigtige skifte. Den kan converteres til CoreML og køres på samme måde som VisualScanner kører MobileCLIP. Pris-besparelsen ved ikke at kalde OpenAI på hver søgning bliver mærkbar når trafikken stiger.
+        </div>
+      </div>
+
+
+      <!-- ═══════════════ 05 CHUNKING ═══════════════ -->
+      <div class="divider">
+        <span class="divider-num">05</span>
+        <span class="divider-label">Den oversete kunst</span>
+        <span class="divider-line"></span>
+      </div>
+
+      <h2 id="chunking">Chunking — at dele tekst op</h2>
+
+      <p class="lead">Et embedding kan kun repræsentere en begrænset mængde tekst meningsfuldt. Du kan ikke embedde en hel bog som ét vektor — den ville miste alle nuancer. Derfor deles tekster op i mindre stykker, kaldet <strong>chunks</strong>, før de embeddes.</p>
+
+      <p>Chunking lyder simpelt — tag teksten, del den op i blokke. Men hvor du deler, og hvor store stykkerne er, har stor indflydelse på kvaliteten af søgningen bagefter. Det er en af de mest undervurderede beslutninger i RAG.</p>
+
+      <h3>Tre grundlæggende strategier</h3>
+
+      <h4>1. Fast længde (fx 800 tegn)</h4>
+      <p>Den simpleste tilgang. Del teksten i blokke af præcis 800 tegn, uanset hvad indholdet er. Hurtigt at implementere, men problematisk: en sætning kan blive halveret midt i, kontekst går tabt på kanterne.</p>
+
+      <h4>2. Fast længde med overlap</h4>
+      <p>Som ovenstående, men hver chunk overlapper med den forrige (fx 100 tegn). Det betyder ord-grænser bevares mere intakte, og kontekst flyder bedre over fra chunk til chunk. Det er det InterviewNavigator gør — 800–1200 tegn per chunk.</p>
+
+      <h4>3. Semantisk chunking</h4>
+      <p>Avancerede tilgange deler teksten ved naturlige grænser: afsnit, sætninger, paragraffer, eller emneskift. Det giver de mest "sammenhængende" chunks, men kræver mere intelligens i opdelingen. Markdown-headers, sætningstegn, tomme linjer kan alle være signaler.</p>
+
+      <div class="diagram">
+        <svg viewBox="0 0 620 220" xmlns="http://www.w3.org/2000/svg">
+          <text x="20" y="25" font-family="Geist Mono, monospace" font-size="10" fill="#0a0a0a" letter-spacing="1.5" font-weight="500">CHUNKING-STRATEGIER</text>
+
+          <!-- Strategy 1: Fast længde -->
+          <text x="20" y="55" font-family="Geist Mono, monospace" font-size="9" fill="#525252">1. FAST LÆNGDE</text>
+          <rect x="20" y="65" width="100" height="25" fill="#e0e7ff" stroke="#c7d2fe"/>
+          <rect x="120" y="65" width="100" height="25" fill="#e0e7ff" stroke="#c7d2fe"/>
+          <rect x="220" y="65" width="100" height="25" fill="#e0e7ff" stroke="#c7d2fe"/>
+          <rect x="320" y="65" width="100" height="25" fill="#e0e7ff" stroke="#c7d2fe"/>
+          <rect x="420" y="65" width="100" height="25" fill="#e0e7ff" stroke="#c7d2fe"/>
+          <text x="528" y="82" font-family="Geist Mono, monospace" font-size="9" fill="#a3a3a3">simpel</text>
+
+          <!-- Strategy 2: Med overlap -->
+          <text x="20" y="115" font-family="Geist Mono, monospace" font-size="9" fill="#525252">2. MED OVERLAP</text>
+          <rect x="20" y="125" width="120" height="25" fill="#e0e7ff" stroke="#c7d2fe"/>
+          <rect x="100" y="125" width="120" height="25" fill="#c7d2fe" stroke="#a5b4fc" opacity="0.85"/>
+          <rect x="180" y="125" width="120" height="25" fill="#e0e7ff" stroke="#c7d2fe"/>
+          <rect x="260" y="125" width="120" height="25" fill="#c7d2fe" stroke="#a5b4fc" opacity="0.85"/>
+          <rect x="340" y="125" width="120" height="25" fill="#e0e7ff" stroke="#c7d2fe"/>
+          <rect x="420" y="125" width="100" height="25" fill="#c7d2fe" stroke="#a5b4fc" opacity="0.85"/>
+          <text x="528" y="142" font-family="Geist Mono, monospace" font-size="9" fill="#a3a3a3">sikrere</text>
+
+          <!-- Strategy 3: Semantisk -->
+          <text x="20" y="175" font-family="Geist Mono, monospace" font-size="9" fill="#525252">3. SEMANTISK</text>
+          <rect x="20" y="185" width="65" height="25" fill="#d1fae5" stroke="#a7f3d0"/>
+          <rect x="85" y="185" width="145" height="25" fill="#d1fae5" stroke="#a7f3d0"/>
+          <rect x="230" y="185" width="55" height="25" fill="#d1fae5" stroke="#a7f3d0"/>
+          <rect x="285" y="185" width="100" height="25" fill="#d1fae5" stroke="#a7f3d0"/>
+          <rect x="385" y="185" width="135" height="25" fill="#d1fae5" stroke="#a7f3d0"/>
+          <text x="528" y="202" font-family="Geist Mono, monospace" font-size="9" fill="#a3a3a3">smartest</text>
+        </svg>
+        <div class="diagram-caption"><strong>Fig. 1.</strong> Hver strategi balancerer enkelhed vs. kvalitet. Semantisk giver bedst søgning men kræver mere kode.</div>
+      </div>
+
+      <h3>Hvor store skal chunks være?</h3>
+
+      <p>Det er en afvejning mellem to hensyn:</p>
+
+      <ul>
+        <li><strong>Små chunks (200–400 tegn)</strong> giver præcise matches — søgningen finder lige præcis det relevante. Men kontekst går tabt: en chunk på 200 tegn er måske bare halvdelen af en tanke.</li>
+        <li><strong>Store chunks (1500–3000 tegn)</strong> bevarer kontekst — hele afsnit er intakte. Men søgningen bliver mindre præcis: en relevant sætning drukner i 1500 tegn af mindre relevant tekst.</li>
+      </ul>
+
+      <p>Sweet spot for de fleste brugscases er omkring <strong>500–1000 tegn</strong> med <strong>10–20% overlap</strong>. Det er hvad næsten alle moderne RAG-systemer lander på efter eksperimenter. Det er også hvad InterviewNavigator bruger.</p>
+
+      <details class="deep-dive">
+        <summary>Dyk dybere — avanceret chunking for transskripter</summary>
+        <div class="deep-content">
+          <p>Transskriptioner har en speciel struktur: de består af udsagn fra forskellige talere, ofte med tidskoder. Det giver flere muligheder for klog chunking:</p>
+          <ul>
+            <li><strong>Per taler-tur:</strong> Hver chunk indeholder kun ét sammenhængende udsagn fra én person. God til "hvem sagde hvad" søgning.</li>
+            <li><strong>Sliding window over flere ture:</strong> Hver chunk dækker fx 3–5 udvekslinger, så samtalens dynamik bevares. Bedre til at fange dialog-mønstre.</li>
+            <li><strong>Topic-baseret:</strong> Brug en lille model til at detektere emneskift, og chunk ved hver overgang. Kompliceret men giver semantisk meningsfulde chunks.</li>
+          </ul>
+          <p>For din InterviewNavigator-context: per-tur-chunks med 1–2 forrige ture som overlap-kontekst er sandsynligvis bedst. Det matcher hvordan editorer faktisk leder — efter <em>udsagn</em>, ikke efter abstrakte tekstblokke.</p>
+        </div>
+      </details>
+
+      <!-- ═══════════════ 06 RAG PIPELINE ═══════════════ -->
+      <div class="divider">
+        <span class="divider-num">06</span>
+        <span class="divider-label">Det komplette flow</span>
+        <span class="divider-line"></span>
+      </div>
+
+      <h2 id="rag-pipelinen">RAG-pipelinen</h2>
+
+      <p class="lead">Nu kan vi sætte det hele sammen. RAG (Retrieval Augmented Generation) er navnet på arkitekturen der lader en LLM "tale med" et bibliotek af tekst den ikke selv har lært udenad.</p>
+
+      <p>Det består af præcis to faser — akkurat som VisualScanner.</p>
+
+      <h3>Indeks-fasen (engang, på forhånd)</h3>
+
+      <ol>
+        <li>Alle dokumenter loades</li>
+        <li>Hvert dokument deles op i chunks (fx 800 tegn med 100 tegns overlap)</li>
+        <li>Hver chunk sendes gennem text-embedding modellen</li>
+        <li>Ud kommer en vektor (fx 1536-dim) per chunk</li>
+        <li>Vektor + chunk-tekst + metadata gemmes i en vector database</li>
+      </ol>
+
+      <h3>Spørge-fasen (hver gang du spørger)</h3>
+
+      <ol>
+        <li>Brugerens spørgsmål sendes gennem <em>samme</em> embedding-model → spørgsmåls-vektor</li>
+        <li>Vector databasen finder de fx 10 chunks med højest cosine similarity til spørgsmålet</li>
+        <li>De 10 chunks samles i en prompt sammen med spørgsmålet</li>
+        <li>Prompten sendes til en LLM (fx GPT-4 eller Claude)</li>
+        <li>LLM'en svarer baseret <em>kun</em> på de medsendte chunks</li>
+      </ol>
+
+      <div class="diagram">
+        <svg viewBox="0 0 620 320" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="arrR" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+              <path d="M0,0 L6,3 L0,6 Z" fill="#525252"/>
+            </marker>
+          </defs>
+
+          <text x="20" y="25" font-family="Geist Mono, monospace" font-size="10" fill="#0a0a0a" letter-spacing="1.5" font-weight="500">INDEKS-FASEN</text>
+
+          <rect x="20" y="40" width="80" height="35" fill="#fafafa" stroke="#ededed" rx="3"/>
+          <text x="60" y="62" font-family="Geist Mono, monospace" font-size="10" fill="#525252" text-anchor="middle">dokument.txt</text>
+
+          <path d="M 100 57 L 130 57" stroke="#525252" stroke-width="1" marker-end="url(#arrR)"/>
+
+          <rect x="130" y="40" width="80" height="35" fill="#fafafa" stroke="#ededed" rx="3"/>
+          <text x="170" y="56" font-family="Geist Mono, monospace" font-size="9" fill="#525252" text-anchor="middle">chunker</text>
+          <text x="170" y="68" font-family="Geist Mono, monospace" font-size="9" fill="#a3a3a3" text-anchor="middle">800c + overlap</text>
+
+          <path d="M 210 57 L 240 57" stroke="#525252" stroke-width="1" marker-end="url(#arrR)"/>
+
+          <rect x="240" y="40" width="90" height="35" fill="#fafafa" stroke="#ededed" rx="3"/>
+          <text x="285" y="56" font-family="Geist Mono, monospace" font-size="9" fill="#525252" text-anchor="middle">embedding</text>
+          <text x="285" y="68" font-family="Geist Mono, monospace" font-size="9" fill="#a3a3a3" text-anchor="middle">text encoder</text>
+
+          <path d="M 330 57 L 360 57" stroke="#525252" stroke-width="1" marker-end="url(#arrR)"/>
+
+          <rect x="360" y="40" width="100" height="35" fill="#fafafa" stroke="#0ea5e9" rx="3"/>
+          <text x="410" y="56" font-family="Geist Mono, monospace" font-size="9" fill="#0a0a0a" text-anchor="middle">[1536-dim vec]</text>
+          <text x="410" y="68" font-family="Geist Mono, monospace" font-size="9" fill="#a3a3a3" text-anchor="middle">per chunk</text>
+
+          <path d="M 460 57 L 490 57" stroke="#525252" stroke-width="1" marker-end="url(#arrR)"/>
+
+          <rect x="490" y="40" width="90" height="35" fill="#fafafa" stroke="#ededed" rx="3"/>
+          <text x="535" y="56" font-family="Geist Mono, monospace" font-size="9" fill="#525252" text-anchor="middle">vector DB</text>
+          <text x="535" y="68" font-family="Geist Mono, monospace" font-size="9" fill="#a3a3a3" text-anchor="middle">indekseret</text>
+
+          <line x1="20" y1="115" x2="600" y2="115" stroke="#ededed" stroke-dasharray="3,3"/>
+
+          <text x="20" y="145" font-family="Geist Mono, monospace" font-size="10" fill="#0a0a0a" letter-spacing="1.5" font-weight="500">SPØRGE-FASEN</text>
+
+          <rect x="20" y="160" width="120" height="35" fill="#fafafa" stroke="#ededed" rx="3"/>
+          <text x="80" y="182" font-family="Geist, sans-serif" font-style="italic" font-size="11" fill="#525252" text-anchor="middle">"hvad sagde de om X?"</text>
+
+          <path d="M 140 177 L 170 177" stroke="#525252" stroke-width="1" marker-end="url(#arrR)"/>
+
+          <rect x="170" y="160" width="80" height="35" fill="#fafafa" stroke="#ededed" rx="3"/>
+          <text x="210" y="176" font-family="Geist Mono, monospace" font-size="9" fill="#525252" text-anchor="middle">embedding</text>
+          <text x="210" y="188" font-family="Geist Mono, monospace" font-size="9" fill="#a3a3a3" text-anchor="middle">samme model</text>
+
+          <path d="M 250 177 L 280 177" stroke="#525252" stroke-width="1" marker-end="url(#arrR)"/>
+
+          <rect x="280" y="160" width="100" height="35" fill="#fafafa" stroke="#0ea5e9" rx="3"/>
+          <text x="330" y="176" font-family="Geist Mono, monospace" font-size="9" fill="#0a0a0a" text-anchor="middle">retrieval</text>
+          <text x="330" y="188" font-family="Geist Mono, monospace" font-size="9" fill="#a3a3a3" text-anchor="middle">top-k chunks</text>
+
+          <path d="M 380 177 L 410 177" stroke="#525252" stroke-width="1" marker-end="url(#arrR)"/>
+
+          <rect x="410" y="160" width="80" height="35" fill="#fafafa" stroke="#ededed" rx="3"/>
+          <text x="450" y="176" font-family="Geist Mono, monospace" font-size="9" fill="#525252" text-anchor="middle">prompt</text>
+          <text x="450" y="188" font-family="Geist Mono, monospace" font-size="9" fill="#a3a3a3" text-anchor="middle">samles</text>
+
+          <path d="M 490 177 L 520 177" stroke="#525252" stroke-width="1" marker-end="url(#arrR)"/>
+
+          <rect x="520" y="160" width="60" height="35" fill="#0a0a0a" stroke="#0a0a0a" rx="3"/>
+          <text x="550" y="176" font-family="Geist Mono, monospace" font-size="9" fill="#ffffff" text-anchor="middle">LLM</text>
+          <text x="550" y="188" font-family="Geist Mono, monospace" font-size="9" fill="#a3a3a3" text-anchor="middle">svarer</text>
+
+          <path d="M 550 195 L 550 240" stroke="#525252" stroke-width="1" marker-end="url(#arrR)"/>
+
+          <rect x="160" y="245" width="380" height="50" fill="#fafafa" stroke="#0a0a0a" stroke-width="1" rx="4"/>
+          <text x="350" y="265" font-family="Geist, sans-serif" font-style="italic" font-size="11" fill="#0a0a0a" text-anchor="middle">"De fleste respondenter nævnte at bæredygtighed</text>
+          <text x="350" y="282" font-family="Geist, sans-serif" font-style="italic" font-size="11" fill="#0a0a0a" text-anchor="middle">er en prioritet, særligt i forhold til transport..."</text>
+        </svg>
+        <div class="diagram-caption"><strong>Fig. 2.</strong> RAG i to faser. Indekseringen er engang. Spørgsmålene kan komme uendelig mange gange efter.</div>
+      </div>
+
+      <h3>Hvad prompten faktisk indeholder</h3>
+
+      <p>For at gøre det helt konkret — sådan ser prompten ud der sendes til LLM'en:</p>
+
+      <div class="prompt-example">
+        <div class="prompt-header">
+          <span>PROMPT TIL LLM</span>
+          <span>~ 4.500 tokens</span>
+        </div>
+        <div class="prompt-body"><span class="ph">SYSTEM:</span>
+Du er en assistent der besvarer spørgsmål baseret
+på de medsendte uddrag fra interviews. Hvis svaret
+ikke kan udledes fra uddragene, sig det ærligt.
+
+<span class="ph">USER:</span>
+<span class="label">// De relevante chunks fundet via embedding-søgning</span>
+
+[Uddrag 1 — Interview med Anna, 12:34]
+"Bæredygtighed er noget vi taler meget om i
+familien. Vi har skåret kødforbruget ned,
+og vi cykler meget mere..."
+
+[Uddrag 2 — Interview med Mikkel, 08:21]
+"Jeg er ærligt talt skeptisk overfor hvor
+meget mit valg betyder. De store udledere..."
+
+[Uddrag 3 — Interview med Sofie, 15:02]
+"Min generation tænker meget på det her.
+Det er nærmest blevet en del af identiteten..."
+
+<span class="label">// + 7 flere uddrag</span>
+
+<span class="ph">SPØRGSMÅL:</span>
+Hvad sagde respondenterne om bæredygtighed?</div>
+      </div>
+
+      <p>Bemærk: LLM'en ser <em>ikke</em> hele transskriptionerne. Kun de 10 mest relevante uddrag, som typisk fylder 3.000–5.000 tokens. Dens svar bliver derfor fokuseret på det relevante — og prisen forbliver overskuelig uanset hvor stort biblioteket er.</p>
+
+      <blockquote>
+        Modellen "ved" intet om dine data. Den ser kun det du sender med — og den ser det som om det var nyt for hver eneste anmodning.
+        <cite>Den vigtige mentale model</cite>
+      </blockquote>
+
+
+      <!-- ═══════════════ 07 INTERVIEW NAVIGATOR ═══════════════ -->
+      <div class="divider">
+        <span class="divider-num">07</span>
+        <span class="divider-label">Vores eksempel</span>
+        <span class="divider-line"></span>
+      </div>
+
+      <h2 id="interview-navigator">Eksempel: InterviewNavigator</h2>
+
+      <p class="lead">Du har faktisk allerede en RAG-implementering. InterviewNavigator gør præcis det vi har gennemgået, men optimeret til transskription-søgning.</p>
+
+      <h3>Sådan er den bygget</h3>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Komponent</th><th>Implementering</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="col-label">Embedding-model</td><td><code>text-embedding-3-small</code> (OpenAI). 1536-dim. 1 API-kald per søgning.</td></tr>
+            <tr><td class="col-label">Chunking</td><td>800–1200 tegn per chunk med overlap. Semantisk indeksering af transskripter.</td></tr>
+            <tr><td class="col-label">Lagring</td><td>Lokale embedding-filer (ingen ekstern vector DB). Holder alt på enheden.</td></tr>
+            <tr><td class="col-label">Cosine similarity</td><td>Beregnet lokalt med Apples vDSP framework. Hurtigt og uden netværkskald.</td></tr>
+            <tr><td class="col-label">LLM</td><td><code>gpt-4o-mini</code> til syntese: story-generering, AI chat (session og all-interviews scope), oversættelse, cross-interview analyse.</td></tr>
+            <tr><td class="col-label">Klassifikation</td><td>Strong/Good/Weak inddeling af resultater. Hjælper editorerne hurtigt at vurdere relevans.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Hvad den gør i praksis</h3>
+
+      <p>Editor: <em>"Find alle steder hvor respondenterne taler om karriereskift"</em></p>
+
+      <ol>
+        <li>InterviewNavigator embedder spørgsmålet (1 API-kald, ~$0.0001)</li>
+        <li>vDSP beregner cosine similarity mellem spørgsmåls-vektoren og alle chunk-vektorer (lokalt, instant)</li>
+        <li>De top 20 mest lignende chunks præsenteres for editoren med klassifikation, kildeklip og timecode</li>
+        <li>Editoren springer direkte til frame i FCP via FCPXML-eksport</li>
+      </ol>
+
+      <p>Hvis editoren vil have et <em>syntetiseret</em> svar — ikke bare rå chunks — sendes de top-rangerede chunks til <code>gpt-4o-mini</code> sammen med spørgsmålet, og LLM'en formulerer en sammenfatning med citater og referencer tilbage til de oprindelige interviews.</p>
+
+      <div class="callout callout-ok">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        <div class="callout-body">
+          <span class="callout-label">Hvad det betyder</span>
+          <p>Du har allerede mestret hele RAG-arkitekturen i et produktionsværktøj. Når vi snakker om at bygge en RAG-baseret vidensbank til Dashboard, taler vi om at <em>genbruge</em> præcis det mønster — ikke at bygge noget nyt fra bunden. Hele knowhow'en overføres direkte.</p>
+        </div>
+      </div>
+
+      <!-- ═══════════════ 08 VECTOR DATABASES ═══════════════ -->
+      <div class="divider">
+        <span class="divider-num">08</span>
+        <span class="divider-label">Hvor vektorerne bor</span>
+        <span class="divider-line"></span>
+      </div>
+
+      <h2 id="vector-databases">Vector databases</h2>
+
+      <p class="lead">En vector database er en specialiseret database designet til hurtig nearest-neighbor-søgning i højdimensionale vektorer. Den er fundamentet under enhver RAG-implementering af nogen størrelse.</p>
+
+      <p>Med få tusind chunks kan du sagtens køre cosine similarity i et flat array som InterviewNavigator gør. Men når du har millioner af vektorer, bliver det brute-force tilgang for langsomt — og det er her vector databases kommer ind med smartere algoritmer.</p>
+
+      <h3>Hvordan de virker (kort)</h3>
+
+      <p>I stedet for at sammenligne din spørgsmåls-vektor mod <em>alle</em> chunks, bruger en vector database approksimative algoritmer (typisk <strong>HNSW</strong> — Hierarchical Navigable Small World) der finder de 10 bedste matches uden at tjekke alle. Det er ikke 100% præcist, men det er typisk 99%+ præcist og 100–1000× hurtigere.</p>
+
+      <h3>De vigtigste muligheder</h3>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Database</th><th>Karakter</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="col-label">Pinecone</td><td>Cloud-baseret SaaS. Det mest brugte. Du betaler per gemte vektor. Nem opsætning, ingen drift.</td></tr>
+            <tr><td class="col-label">Weaviate</td><td>Open-source, kan selv-hostes eller bruges som SaaS. God til hybrid søgning (vektor + keyword).</td></tr>
+            <tr><td class="col-label">Qdrant</td><td>Open-source, Rust-baseret. Hurtig, lille footprint. Populært til selvhostede setups.</td></tr>
+            <tr><td class="col-label">Chroma</td><td>Embedded-first — kører i din egen proces, gemmer til disk. Ingen server. Perfekt til prototyping og små apps.</td></tr>
+            <tr><td class="col-label">SQLite + sqlite-vec</td><td>SQLite extension der giver vector search. Single-file database. Perfekt til Mac-apps. Sandsynligvis det rigtige til Dashboard.</td></tr>
+            <tr><td class="col-label">usearch</td><td>C++/Swift bibliotek. Det er det Apple bruger til FCP transcript-søgning. Single-file index, ekstrem hastighed.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout callout-neutral">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        <div class="callout-body">
+          <span class="callout-label">Udforsk videre</span>
+          For Dashboard er sandsynligvis <strong>SQLite + sqlite-vec</strong> eller <strong>usearch</strong> det rigtige valg. Begge giver dig single-file databaser der lever sammen med appens data, ingen ekstern server, og fungerer offline. Apples valg af usearch til FCP er ikke tilfældig — det er det hurtigste til denne brugscase på Apple Silicon.
+        </div>
+      </div>
+
+      <details class="deep-dive">
+        <summary>Dyk dybere — hvorfor approksimativ søgning er OK</summary>
+        <div class="deep-content">
+          <p>Det føles modproduktivt at acceptere "kun" 99% præcision i sin søgning. Men i praksis betyder det:</p>
+          <p>Hvis du leder efter de top 10 mest relevante chunks blandt 1 million, vil en eksakt søgning og en approksimativ søgning typisk være enige om 8–10 af resultaterne. De afvigelser der opstår, er på grænsen mellem "9. mest relevant" og "12. mest relevant" — chunks der i forvejen var grænsetilfælde, og som ofte alligevel ikke ville være afgørende for svaret.</p>
+          <p>Til gengæld: hastighedsforskellen er enorm. Eksakt søgning i 1M vektorer kan tage sekunder. HNSW-baseret approksimativ søgning klarer det på millisekunder. For en bruger er det forskellen på "føles instant" og "føles broken".</p>
+        </div>
+      </details>
+
+      <!-- ═══════════════ 09 HYBRID & RERANK ═══════════════ -->
+      <div class="divider">
+        <span class="divider-num">09</span>
+        <span class="divider-label">Næste niveau</span>
+        <span class="divider-line"></span>
+      </div>
+
+      <h2 id="hybrid-rerank">Hybrid søgning &amp; reranking</h2>
+
+      <p class="lead">Ren embedding-søgning er stærk men ikke perfekt. Den fanger semantik godt, men nogle gange har du brug for præcise keyword-matches eller en bedre måde at rangere resultaterne på. To teknikker udvider RAG til næste niveau.</p>
+
+      <h3>Hybrid søgning — kombinér semantisk med keyword</h3>
+
+      <p>Embedding-søgning er fantastisk til at finde "konceptuelt relaterede" tekster. Men den er ofte dårlig til at finde præcise navne, kodenumre, eller sjældne fagtermer. Hvis du leder efter "FCP 11.0.4 release notes", vil en embedding-søgning måske finde generelle FCP-tekster — men ikke nødvendigvis lige præcis den rigtige version.</p>
+
+      <p>Løsningen: kombinér <strong>vektor-søgning</strong> (semantisk) med <strong>BM25</strong> (klassisk keyword-søgning, som Google bruger). Hver chunk får to scores — én for semantisk relevans, én for keyword-match — og en samlet score afgør rangeringen.</p>
+
+      <p>De fleste moderne vector databases (Weaviate, Qdrant, Chroma) understøtter dette out-of-the-box. Det er sjældent værd at undvære når man først har set effekten.</p>
+
+      <h3>Reranking — endnu et lag præcision</h3>
+
+      <p>Embedding-modeller er optimerede for hastighed, ikke for præcision i selve rangeringen. De finder typisk de "rigtige boldgader" af relevante chunks, men ikke altid i den optimale rækkefølge.</p>
+
+      <p>En <strong>reranker</strong> er en separat, langsommere model der tager fx top 20 fra den initiale søgning og rangerer dem mere præcist. Den ser hver chunk og spørgsmålet sammen og laver en mere kvalificeret bedømmelse.</p>
+
+      <p>Resultatet: bedre top 5–10 resultater til at sende videre til LLM'en. I praksis er det ofte forskellen på "næsten rigtige svar" og "præcise svar".</p>
+
+      <div class="diagram">
+        <svg viewBox="0 0 600 200" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="arrK" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+              <path d="M0,0 L6,3 L0,6 Z" fill="#525252"/>
+            </marker>
+          </defs>
+
+          <text x="20" y="25" font-family="Geist Mono, monospace" font-size="10" fill="#0a0a0a" letter-spacing="1.5" font-weight="500">RAG MED RERANKING</text>
+
+          <rect x="20" y="60" width="100" height="40" fill="#fafafa" stroke="#ededed" rx="3"/>
+          <text x="70" y="78" font-family="Geist Mono, monospace" font-size="9" fill="#525252" text-anchor="middle">vector search</text>
+          <text x="70" y="92" font-family="Geist Mono, monospace" font-size="9" fill="#a3a3a3" text-anchor="middle">top 50</text>
+
+          <path d="M 120 80 L 150 80" stroke="#525252" stroke-width="1" marker-end="url(#arrK)"/>
+
+          <rect x="150" y="60" width="100" height="40" fill="#fafafa" stroke="#ededed" rx="3"/>
+          <text x="200" y="78" font-family="Geist Mono, monospace" font-size="9" fill="#525252" text-anchor="middle">+ BM25 keyword</text>
+          <text x="200" y="92" font-family="Geist Mono, monospace" font-size="9" fill="#a3a3a3" text-anchor="middle">filter til 20</text>
+
+          <path d="M 250 80 L 280 80" stroke="#525252" stroke-width="1" marker-end="url(#arrK)"/>
+
+          <rect x="280" y="60" width="100" height="40" fill="#fafafa" stroke="#0ea5e9" rx="3"/>
+          <text x="330" y="78" font-family="Geist Mono, monospace" font-size="9" fill="#0a0a0a" text-anchor="middle">reranker</text>
+          <text x="330" y="92" font-family="Geist Mono, monospace" font-size="9" fill="#a3a3a3" text-anchor="middle">vælg top 8</text>
+
+          <path d="M 380 80 L 410 80" stroke="#525252" stroke-width="1" marker-end="url(#arrK)"/>
+
+          <rect x="410" y="60" width="100" height="40" fill="#0a0a0a" stroke="#0a0a0a" stroke-width="1.5" rx="3"/>
+          <text x="460" y="78" font-family="Geist Mono, monospace" font-size="9" fill="#ffffff" text-anchor="middle">LLM</text>
+          <text x="460" y="92" font-family="Geist Mono, monospace" font-size="9" fill="#a3a3a3" text-anchor="middle">præcist svar</text>
+
+          <text x="265" y="150" font-family="Geist, sans-serif" font-style="italic" font-size="11" fill="#525252" text-anchor="middle">Cast bredt → snæver progressivt → giv LLM'en det bedste</text>
+        </svg>
+        <div class="diagram-caption"><strong>Fig. 3.</strong> Avanceret RAG: hver fase reducerer kandidaterne men øger præcisionen.</div>
+      </div>
+
+      <p>Du behøver ikke alle disse lag fra start. Begynd simpelt — embedding-søgning alene — og tilføj BM25 og reranking når du opdager de specifikke begrænsninger der gør behovet relevant.</p>
+
+      <!-- ═══════════════ 10 ALTERNATIVER ═══════════════ -->
+      <div class="divider">
+        <span class="divider-num">10</span>
+        <span class="divider-label">Det fulde billede</span>
+        <span class="divider-line"></span>
+      </div>
+
+      <h2 id="alternativer">RAG vs alternativerne</h2>
+
+      <p class="lead">RAG er ikke altid det rigtige værktøj. Her er de andre tilgange du kan vælge — og hvornår de er bedre.</p>
+
+      <h3>1. Long context — bare smid det hele ind</h3>
+      <p>Med modeller der har 200K+ context windows kan man fristes til at droppe RAG og bare sende alle dokumenter med hver gang.</p>
+      <p><strong>Bedre når:</strong> Datasættet er lille (under fx 50K tokens), eller når hvert dokument er kort og selvstændigt og du faktisk har brug for at modellen ser det <em>hele</em>.</p>
+      <p><strong>Dårligere når:</strong> Datasættet er stort, du betaler per kald, eller hastighed betyder noget. RAG vinder næsten altid på alle tre.</p>
+
+      <h3>2. Fine-tuning — lær modellen dit indhold</h3>
+      <p>I stedet for at sende dit indhold med hver gang, kan du træne (fine-tune) en model så den "lærer" dit indhold udenad. Dette er hvad OpenAI's Fine-tuning API tilbyder.</p>
+      <p><strong>Bedre når:</strong> Du har brug for at modellen ændrer sin <em>stil</em> eller <em>format</em> — fx altid svare i en bestemt tone, følge en bestemt struktur, eller bruge et fagsprog. Også godt til klassifikationsopgaver.</p>
+      <p><strong>Dårligere når:</strong> Du har brug for faktisk indhold der kan ændre sig over tid. Fine-tuned modeller "ruster" — du må træne om hver gang dine data opdateres. RAG opdateres ved bare at re-indeksere.</p>
+
+      <h3>3. Agents — lad modellen selv finde det</h3>
+      <p>I stedet for at lave retrieval på forhånd og fodre modellen med chunks, kan du give modellen <em>værktøjer</em> til selv at søge — fx "search_documents()" eller "read_file()". Modellen beslutter selv hvornår og hvad den vil hente.</p>
+      <p><strong>Bedre når:</strong> Spørgsmål er komplekse og kræver flere søgninger eller iterativ udforskning. Eller når der ikke er én "rigtig" svar-pipeline.</p>
+      <p><strong>Dårligere når:</strong> Hastighed og forudsigelighed er vigtigt. Agent-baserede systemer er langsommere og mindre forudsigelige end klassisk RAG.</p>
+
+      <h3>Når i tvivl: RAG</h3>
+      <p>For det allermeste man vil bygge — søgbar dokumentation, FAQ-systemer, vidensbanker, kundeservice over støttedokumenter — er RAG det rigtige startsted. Det er forudsigeligt, hurtigt at implementere, billigt at køre, og let at debugge.</p>
+
+      <div class="callout callout-info">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+        <div class="callout-body">
+          <span class="callout-label">Til Dashboard-vidensbanken</span>
+          <p>Det rigtige startsted er klassisk RAG: indeksér vidensbankens artikler, søg semantisk, send top-N chunks til en LLM med spørgsmålet. Hvis det viser sig utilstrækkeligt for visse spørgsmålstyper, kan du tilføje agent-funktionalitet senere — fx en "graph search" der kan følge links mellem artikler. Men start simpelt.</p>
+        </div>
+      </div>
+
+
+      <!-- ═══════════════ 11 DASHBOARD ═══════════════ -->
+      <div class="divider">
+        <span class="divider-num">11</span>
+        <span class="divider-label">Den næste sten</span>
+        <span class="divider-line"></span>
+      </div>
+
+      <h2 id="dashboard">Til Dashboard</h2>
+
+      <p class="lead">Vi snakkede i Kapitel 01 om at den her vidensbank skal ende i Dashboard. Med RAG-perspektivet kan vi nu tegne arkitekturen mere konkret.</p>
+
+      <h3>Datamodel</h3>
+
+      <p>Hver "artikel" i vidensbanken (som denne HTML) bør gemmes som strukturerede sektioner — ikke én stor blob. Det giver:</p>
+
+      <ul>
+        <li>Naturlige chunk-grænser (én sektion = ét chunk, eller én sektion = flere chunks afhængigt af længde)</li>
+        <li>Mulighed for at vise et <em>specifikt afsnit</em> i søgeresultatet i stedet for hele artiklen</li>
+        <li>Klikbare "se hele artiklen"-links der scroller til præcis det fundne sted</li>
+        <li>Versionering på sektion-niveau hvis det bliver relevant senere</li>
+      </ul>
+
+      <h3>Foreslået arkitektur</h3>
+
+      <div class="decision-list">
+        <div class="decision-row">
+          <div class="decision-key">Lagring</div>
+          <div class="decision-val">
+            <strong>SQLite (én fil per Dashboard-installation)</strong>
+            Tabeller for artikler, sektioner, vektorer, søgehistorik. Perfect fit til en single-user Mac-app. Ingen server, ingen drift.
+          </div>
+        </div>
+        <div class="decision-row">
+          <div class="decision-key">Vector index</div>
+          <div class="decision-val">
+            <strong>sqlite-vec extension eller usearch</strong>
+            Begge giver hurtig nearest-neighbor søgning. usearch er hvad Apple selv bruger til FCP. sqlite-vec er enklere at integrere med øvrig SQLite-data.
+          </div>
+        </div>
+        <div class="decision-row">
+          <div class="decision-key">Embedding-model</div>
+          <div class="decision-val">
+            <strong>text-embedding-3-small via OpenAI API</strong>
+            Match med InterviewNavigator. Genbrug af eksisterende API-key og pipeline-kode. Skift senere til lokal model hvis privacy eller cost bliver issue.
+          </div>
+        </div>
+        <div class="decision-row">
+          <div class="decision-key">LLM til syntese</div>
+          <div class="decision-val">
+            <strong>Claude Sonnet eller gpt-4o-mini</strong>
+            Til at lave samtale-svar på vidensbank-spørgsmål. "Hvad var det vi besluttede om CLIP?" → relevante chunks → syntetiseret svar med kildehenvisninger.
+          </div>
+        </div>
+        <div class="decision-row">
+          <div class="decision-key">UI-mønster</div>
+          <div class="decision-val">
+            <strong>To søgemodes side om side</strong>
+            "Browse"-mode (artikler organiseret hierarkisk, som denne HTML) og "Spørg"-mode (input-felt til naturlige spørgsmål, RAG-baseret svar). De to komplementerer hinanden.
+          </div>
+        </div>
+      </div>
+
+      <h3>Migrationsvej</h3>
+
+      <p>Den nemmeste vej fra "denne HTML" til "kører i Dashboard":</p>
+
+      <ol>
+        <li>Konvertér HTML-sektionerne til Markdown eller strukturerede JSON-objekter</li>
+        <li>Skriv en lille importer i Dashboard der læser disse og fylder SQLite-tabellerne</li>
+        <li>Genbrug InterviewNavigator's embedding-pipeline (samme model, samme cosine similarity-kode)</li>
+        <li>Byg en simpel søge-UI der viser artikel-titel, det fundne afsnit, og en knap til "åbn fuld artikel"</li>
+        <li>Tilføj "Spørg"-mode senere når basis-søgning kører</li>
+      </ol>
+
+      <p>Hele første version — uden "Spørg"-mode, bare semantisk artikel-søgning — kunne være på plads på 1–2 dage. RAG-funktionen er en uges arbejde oven på.</p>
+
+      <div class="callout callout-neutral">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        <div class="callout-body">
+          <span class="callout-label">Udforsk videre</span>
+          Den her vidensbank-arkitektur er præcis hvad firmaer som <strong>Notion AI</strong> og <strong>Linear</strong> har bygget oven på deres dokumenter. Forskellen er at de gør det centraliseret i skyen. Du kan gøre det <em>lokalt</em> på Mac, hvilket både er privatlivsmæssigt bedre og hurtigere — men kræver at du bygger pipelinen selv. Heldigvis er værktøjerne nu modne nok til at det ikke er en stor opgave.
+        </div>
+      </div>
+
+      <!-- ═══════════════ 12 ORDBOG ═══════════════ -->
+      <div class="divider">
+        <span class="divider-num">12</span>
+        <span class="divider-label">Reference</span>
+        <span class="divider-line"></span>
+      </div>
+
+      <h2 id="ordbog">Ordbog</h2>
+
+      <p class="lead">Termer fra denne vidensbank. Klik på links i teksten ovenfor for at hoppe direkte hertil.</p>
+
+      <div class="glossary-grid">
+
+        <div class="glossary-item" id="token">
+          <div class="glossary-term">Token<span class="pronounce">/toh-ken/</span></div>
+          <div class="glossary-def">Mindste enhed en LLM arbejder med — typisk et stykke tekst på 3–5 tegn. Hverken bogstav eller ord. Alt prissætning, loftsmåling og hastighed på LLM'er måles i tokens.</div>
+        </div>
+
+        <div class="glossary-item" id="context-window-glos">
+          <div class="glossary-term">Context window</div>
+          <div class="glossary-def">Maksimum antal tokens en LLM kan håndtere i én anmodning. Både input og output skal passe ind. Moderne modeller har 128K–2M tokens. Tænk på det som korttidshukommelse.</div>
+        </div>
+
+        <div class="glossary-item" id="rag">
+          <div class="glossary-term">RAG<span class="pronounce">/R-A-G/</span></div>
+          <div class="glossary-def">Retrieval Augmented Generation. Arkitektur hvor relevante dokument-chunks findes via embedding-søgning og sendes med til en LLM som kontekst, så den kan svare baseret på dem. Standard-løsning til at lade LLM'er "tale med" store dokumentmasser.</div>
+        </div>
+
+        <div class="glossary-item" id="chunking-glos">
+          <div class="glossary-term">Chunking</div>
+          <div class="glossary-def">Processen hvorpå lange dokumenter deles op i mindre stykker (chunks) inden de embeddes. Typisk 500–1000 tegn med 10–20% overlap. Strategien har stor indflydelse på søgekvaliteten.</div>
+        </div>
+
+        <div class="glossary-item" id="embedding-text">
+          <div class="glossary-term">Tekst-embedding</div>
+          <div class="glossary-def">Vektor-repræsentation af tekst, produceret af en text encoder model. Identisk koncept med billede-embeddings i Kapitel 01 — bare på tekst. Sammenlignes med cosine similarity.</div>
+        </div>
+
+        <div class="glossary-item" id="vector-db">
+          <div class="glossary-term">Vector database</div>
+          <div class="glossary-def">Specialiseret database til hurtig nearest-neighbor søgning i højdimensionale vektorer. Bruger typisk HNSW-algoritme. Eksempler: Pinecone, Qdrant, Chroma, sqlite-vec, usearch.</div>
+        </div>
+
+        <div class="glossary-item" id="hnsw">
+          <div class="glossary-term">HNSW<span class="pronounce">/H-N-S-W/</span></div>
+          <div class="glossary-def">Hierarchical Navigable Small World. Algoritmen de fleste vector databases bruger til hurtig approksimativ nearest-neighbor søgning. Næsten så præcis som brute-force, men hundredevis af gange hurtigere.</div>
+        </div>
+
+        <div class="glossary-item" id="bm25">
+          <div class="glossary-term">BM25<span class="pronounce">/B-M-25/</span></div>
+          <div class="glossary-def">Klassisk keyword-baseret søgealgoritme — den slags Google brugte før neural search. Stadig stærk til præcise navne, kodenumre, og sjældne fagtermer. Kombineres ofte med embedding-søgning i hybrid setups.</div>
+        </div>
+
+        <div class="glossary-item" id="reranker">
+          <div class="glossary-term">Reranker</div>
+          <div class="glossary-def">Sekundær model der tager initial-søgningens top resultater og rangerer dem mere præcist. Langsommere end embedding-søgning, men giver bedre rangering på de få chunks der reelt sendes til LLM.</div>
+        </div>
+
+        <div class="glossary-item" id="hybrid-search">
+          <div class="glossary-term">Hybrid search</div>
+          <div class="glossary-def">Søgning der kombinerer semantisk (embedding) og keyword (BM25) ranking. Henter det bedste fra begge — semantisk forståelse OG præcis term-matching.</div>
+        </div>
+
+        <div class="glossary-item" id="tokenizer">
+          <div class="glossary-term">Tokenizer</div>
+          <div class="glossary-def">Algoritme der deler tekst op i tokens. Hver model har sin egen. Eksempler: SentencePiece, BPE (Byte Pair Encoding), tiktoken (OpenAI). Tokenisering er det allerførste der sker når du sender tekst til en LLM.</div>
+        </div>
+
+        <div class="glossary-item" id="prompt">
+          <div class="glossary-term">Prompt</div>
+          <div class="glossary-def">Den samlede tekst der sendes til en LLM — typisk bestående af system-instruktion, eventuelt kontekst (chunks fra RAG), og brugerens spørgsmål. Det er den rå "anmodning" modellen modtager.</div>
+        </div>
+
+        <div class="glossary-item" id="fine-tuning">
+          <div class="glossary-term">Fine-tuning</div>
+          <div class="glossary-def">Proces hvor en eksisterende model trænes videre på et specifikt datasæt for at lære særlig stil, format eller domæneviden. Alternativ til RAG i nogle tilfælde, men dyrere og mere statisk.</div>
+        </div>
+
+        <div class="glossary-item" id="vdsp">
+          <div class="glossary-term">vDSP</div>
+          <div class="glossary-def">Apples Vector Digital Signal Processing framework. Indeholder højoptimerede operationer for vektor-matematik på Apple Silicon, inklusive cosine similarity. InterviewNavigator bruger det til lokal søgning.</div>
+        </div>
+
+        <div class="glossary-item" id="hallucinations">
+          <div class="glossary-term">Hallucinations</div>
+          <div class="glossary-def">Når en LLM genererer plausibelt klingende men forkerte oplysninger. Et af RAG's primære formål er at <em>reducere</em> hallucinations ved at tvinge modellen til at basere sit svar på medsendte chunks i stedet for at "fri-erindre".</div>
+        </div>
+
+      </div>
+
+      <!-- ═══════════════ 13 VIDERE LÆSNING ═══════════════ -->
+      <div class="divider">
+        <span class="divider-num">13</span>
+        <span class="divider-label">Reference</span>
+        <span class="divider-line"></span>
+      </div>
+
+      <h2 id="videre">Videre læsning</h2>
+
+      <p class="lead">De bedste startsteder hvis du vil dybere ned. Sorteret efter teknisk niveau.</p>
+
+      <div class="resource-list">
+
+        <a href="https://www.anthropic.com/news/contextual-retrieval" target="_blank" class="resource">
+          <div class="resource-type">Anthropic · Anbefales</div>
+          <div class="resource-title">Contextual Retrieval — Anthropics RAG-guide</div>
+          <div class="resource-desc">Den klareste introduktion til moderne RAG fra dem der bygger Claude. Forklarer hvorfor tilføjelse af kontekst per chunk markant forbedrer retrieval.</div>
+        </a>
+
+        <a href="https://platform.openai.com/docs/guides/embeddings" target="_blank" class="resource">
+          <div class="resource-type">OpenAI Docs · Praktisk</div>
+          <div class="resource-title">OpenAI Embeddings Guide</div>
+          <div class="resource-desc">Officiel dokumentation for text-embedding-3-modellerne. Prissætning, dimensioner, sprog-support, kode-eksempler. Det du skal læse før du bygger noget.</div>
+        </a>
+
+        <a href="https://platform.openai.com/tokenizer" target="_blank" class="resource">
+          <div class="resource-type">OpenAI · Værktøj</div>
+          <div class="resource-title">OpenAI Tokenizer</div>
+          <div class="resource-desc">Lille interaktivt værktøj der viser hvordan din tekst opdeles i tokens. Brug det til at få fornemmelse for hvad ting koster, og hvordan dansk vs. engelsk performer.</div>
+        </a>
+
+        <a href="https://github.com/asg017/sqlite-vec" target="_blank" class="resource">
+          <div class="resource-type">GitHub · Til Dashboard</div>
+          <div class="resource-title">sqlite-vec — vector search i SQLite</div>
+          <div class="resource-desc">Den extension der lader dig lave vector search direkte i SQLite. Single-file database, ingen server. Sandsynligvis det rigtige fundament til Dashboard-vidensbanken.</div>
+        </a>
+
+        <a href="https://github.com/unum-cloud/usearch" target="_blank" class="resource">
+          <div class="resource-type">GitHub · Til Dashboard</div>
+          <div class="resource-title">usearch — det Apple bruger</div>
+          <div class="resource-desc">Højtydende C++/Swift bibliotek til vector search. Det Apple selv bruger i FCP transcript-søgning. Alternativ til sqlite-vec hvis hastighed har højeste prioritet.</div>
+        </a>
+
+        <a href="https://www.pinecone.io/learn/" target="_blank" class="resource">
+          <div class="resource-type">Pinecone Learn · Læring</div>
+          <div class="resource-title">Pinecone Learning Center</div>
+          <div class="resource-desc">Bedst kuraterede samling af RAG-tutorials på nettet. Pinecone er en vector DB, men deres læringsmateriale er produkt-agnostisk og uvurderligt.</div>
+        </a>
+
+        <a href="https://huggingface.co/spaces/mteb/leaderboard" target="_blank" class="resource">
+          <div class="resource-type">Hugging Face · Reference</div>
+          <div class="resource-title">MTEB — Embedding Model Leaderboard</div>
+          <div class="resource-desc">Sammenligning af alle embedding-modeller på standardiserede benchmarks. Brugbart hvis du senere vil sammenligne kandidater til en lokal embedding-løsning.</div>
+        </a>
+
+        <a href="https://arxiv.org/abs/2005.11401" target="_blank" class="resource">
+          <div class="resource-type">arXiv · Historisk</div>
+          <div class="resource-title">Det oprindelige RAG-papir (2020)</div>
+          <div class="resource-desc">Facebook AI's papir der introducerede begrebet "Retrieval Augmented Generation". Akademisk men læsbar. Læs hvis du vil forstå hvor det kommer fra.</div>
+        </a>
+
+        <a href="https://research.trychroma.com/evaluating-chunking" target="_blank" class="resource">
+          <div class="resource-type">Chroma Research · Teknisk</div>
+          <div class="resource-title">Evaluating Chunking Strategies</div>
+          <div class="resource-desc">Detaljeret undersøgelse af forskellige chunking-tilgange og deres effekt på retrieval-kvalitet. For når du vil optimere ud over default.</div>
+        </a>
+
+      </div>
+
+      <div class="colophon">
+        <p>Vidensbank · Kapitel 02 · Opdateret april 2026</p>
+        <p>Bygger oven på Kapitel 01 — Visuelle embeddings &amp; VisualScanner</p>
+        <p>Beregnet til intern brug · Metronome / Nordisk Film TV · Post-production</p>
+      </div>
+
+      <div class="chapter-footer">
+        <div class="chapter-footer-nav">
+          <a href="index.html">← Tilbage til forsiden</a>
+        </div>
+        <div class="chapter-footer-meta">
+          KAPITEL 02 · v1.2 · APRIL 2026
+        </div>
+      </div>
+
+    </main>
+
+  </div>
+
+</div>
+
+<script>
+  const progress = document.getElementById('progress');
+  window.addEventListener('scroll', () => {
+    const h = document.documentElement;
+    const pct = (h.scrollTop / (h.scrollHeight - h.clientHeight)) * 100;
+    progress.style.width = pct + '%';
+  });
+
+  const sections = document.querySelectorAll('main h2[id]');
+  const tocLinks = document.querySelectorAll('.toc a');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const id = entry.target.getAttribute('id');
+        tocLinks.forEach(link => {
+          link.classList.toggle('active', link.getAttribute('href') === '#' + id);
+        });
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+  sections.forEach(s => observer.observe(s));
+</script>
+
+</body>
+</html>

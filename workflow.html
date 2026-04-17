@@ -1,0 +1,1187 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kapitel 01 — Visuelle embeddings &amp; VisualScanner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #0a0a0a;
+    --ink-2: #262626;
+    --ink-3: #525252;
+    --ink-4: #a3a3a3;
+    --line: #ededed;
+    --line-2: #f5f5f5;
+    --bg: #ffffff;
+    --tint: #fafafa;
+    --signal: #0ea5e9;
+    --paper-bg: #f0f0ee;
+
+    --info-bg: #f0f9ff;
+    --info-border: #bae6fd;
+    --info-ink: #0c4a6e;
+
+    --warn-bg: #fffbeb;
+    --warn-border: #fde68a;
+    --warn-ink: #78350f;
+
+    --ok-bg: #f0fdf4;
+    --ok-border: #bbf7d0;
+    --ok-ink: #14532d;
+
+    --code-bg: #fafafa;
+    --code-border: #ededed;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; scroll-padding-top: 24px; }
+
+  body {
+    background: var(--paper-bg);
+    color: var(--ink);
+    font-family: 'Geist', -apple-system, sans-serif;
+    font-weight: 400;
+    -webkit-font-smoothing: antialiased;
+    font-feature-settings: 'ss01', 'cv11';
+    min-height: 100vh;
+  }
+
+  .mono { font-family: 'Geist Mono', ui-monospace, monospace; }
+
+  /* PROGRESS */
+  #progress {
+    position: fixed; top: 0; left: 0;
+    height: 2px; background: var(--ink);
+    z-index: 1000; width: 0;
+    transition: width 0.1s ease-out;
+  }
+
+  /* SHEET */
+  .sheet {
+    max-width: 1120px;
+    margin: 32px auto;
+    background: var(--bg);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 10px 40px rgba(0,0,0,0.06);
+    position: relative;
+  }
+
+  /* TOPBAR */
+  .topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 48px;
+    border-bottom: 1px solid var(--line);
+    font-size: 10px;
+    letter-spacing: 0.02em;
+  }
+  .topbar-left { display: flex; align-items: center; gap: 10px; color: var(--ink-3); }
+  .logo-dot {
+    width: 8px; height: 8px;
+    background: var(--ink); border-radius: 50%;
+    position: relative;
+  }
+  .logo-dot::after {
+    content: ''; position: absolute; inset: -3px;
+    border: 1px solid var(--ink); border-radius: 50%;
+    opacity: 0.2;
+  }
+  .topbar-right a {
+    color: var(--ink-3); text-decoration: none;
+    font-family: 'Geist Mono', monospace; font-size: 10px;
+    transition: color 0.15s;
+  }
+  .topbar-right a:hover { color: var(--ink); }
+
+  /* LAYOUT */
+  .layout {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+  }
+
+  /* TOC */
+  .toc {
+    position: sticky;
+    top: 0;
+    align-self: start;
+    height: 100vh;
+    overflow-y: auto;
+    padding: 48px 20px 40px 48px;
+    border-right: 1px solid var(--line);
+  }
+  .toc::-webkit-scrollbar { width: 4px; }
+  .toc::-webkit-scrollbar-thumb { background: var(--line); border-radius: 2px; }
+
+  .toc-label {
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px; font-weight: 500;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--ink-4); margin-bottom: 18px;
+  }
+
+  .toc ol { list-style: none; counter-reset: toc; }
+  .toc li { counter-increment: toc; }
+
+  .toc a {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 5px 10px 5px 10px;
+    margin-left: -10px;
+    font-size: 12.5px;
+    line-height: 1.35;
+    color: var(--ink-3);
+    text-decoration: none;
+    transition: color 0.15s;
+    border-left: 2px solid transparent;
+  }
+  .toc a::before {
+    content: counter(toc, decimal-leading-zero);
+    font-family: 'Geist Mono', monospace;
+    font-size: 9.5px;
+    color: var(--ink-4);
+    flex-shrink: 0;
+    padding-top: 1px;
+  }
+  .toc a:hover { color: var(--ink); }
+  .toc a.active {
+    color: var(--ink);
+    border-left-color: var(--ink);
+  }
+
+  /* MAIN */
+  main {
+    padding: 48px 64px 64px 64px;
+    max-width: 760px;
+  }
+
+  /* HERO */
+  .chapter-hero {
+    padding-bottom: 40px;
+    margin-bottom: 40px;
+    border-bottom: 1px solid var(--line);
+  }
+  .chapter-hero-meta {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 28px;
+  }
+  .chapter-badge {
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px; font-weight: 500;
+    letter-spacing: 0.04em; text-transform: uppercase;
+    color: var(--ink-3);
+    padding: 5px 9px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+  }
+  .chapter-time {
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px; color: var(--ink-4);
+    letter-spacing: 0.02em;
+  }
+  h1 {
+    font-family: 'Geist', sans-serif;
+    font-weight: 500; font-size: 42px;
+    line-height: 1.05;
+    letter-spacing: -0.035em;
+    color: var(--ink); margin-bottom: 20px;
+  }
+  h1 .dim { color: var(--ink-4); font-weight: 400; }
+  .chapter-lede {
+    font-size: 17px; line-height: 1.55;
+    color: var(--ink-2);
+    letter-spacing: -0.01em;
+  }
+  .hero-meta-row {
+    display: flex; gap: 32px; margin-top: 28px; flex-wrap: wrap;
+  }
+  .hero-meta-item {
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px; color: var(--ink-4);
+    text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .hero-meta-item strong {
+    display: block;
+    font-family: 'Geist', sans-serif;
+    font-size: 13px; color: var(--ink);
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: -0.01em;
+    margin-top: 4px;
+  }
+
+  /* SECTION DIVIDERS */
+  .divider {
+    display: flex; align-items: center; gap: 12px;
+    margin: 56px 0 24px 0;
+  }
+  .divider:first-child { margin-top: 0; }
+  .divider-num {
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px; color: var(--ink-4);
+  }
+  .divider-label {
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px; font-weight: 500;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--ink-3); white-space: nowrap;
+  }
+  .divider-line { flex: 1; height: 1px; background: var(--line); }
+
+  /* TYPOGRAPHY */
+  h2 {
+    font-family: 'Geist', sans-serif;
+    font-weight: 500; font-size: 26px;
+    line-height: 1.2;
+    letter-spacing: -0.025em;
+    color: var(--ink);
+    margin: 0 0 18px 0;
+    scroll-margin-top: 24px;
+  }
+  h3 {
+    font-family: 'Geist', sans-serif;
+    font-weight: 500; font-size: 17px;
+    line-height: 1.3;
+    letter-spacing: -0.015em;
+    color: var(--ink);
+    margin: 32px 0 12px 0;
+  }
+  h4 {
+    font-family: 'Geist Mono', monospace;
+    font-weight: 500; font-size: 11px;
+    letter-spacing: 0.05em; text-transform: uppercase;
+    color: var(--ink-3);
+    margin: 28px 0 10px 0;
+  }
+
+  main p {
+    font-size: 15px; line-height: 1.7;
+    color: var(--ink-2);
+    letter-spacing: -0.005em;
+    margin-bottom: 16px;
+  }
+  main p strong { color: var(--ink); font-weight: 500; }
+  main p em { font-style: italic; color: var(--ink); }
+
+  main p.lead {
+    font-size: 17px;
+    color: var(--ink);
+    margin-bottom: 22px;
+  }
+
+  main a {
+    color: var(--ink);
+    text-decoration: underline;
+    text-decoration-color: var(--ink-4);
+    text-underline-offset: 3px;
+    transition: text-decoration-color 0.15s;
+  }
+  main a:hover { text-decoration-color: var(--ink); }
+
+  main code {
+    font-family: 'Geist Mono', monospace;
+    font-size: 13px;
+    padding: 2px 6px;
+    background: var(--code-bg);
+    border: 1px solid var(--code-border);
+    border-radius: 4px;
+    color: var(--ink);
+  }
+
+  /* LISTS */
+  main ul, main ol {
+    margin: 0 0 20px 0;
+    padding-left: 0;
+    list-style: none;
+  }
+  main ul li, main ol li {
+    position: relative;
+    padding-left: 24px;
+    font-size: 15px; line-height: 1.7;
+    color: var(--ink-2);
+    margin-bottom: 8px;
+    letter-spacing: -0.005em;
+  }
+  main ul li strong, main ol li strong { color: var(--ink); font-weight: 500; }
+  main ul li::before {
+    content: '';
+    position: absolute; left: 8px; top: 12px;
+    width: 4px; height: 4px;
+    background: var(--ink-3); border-radius: 50%;
+  }
+  main ol { counter-reset: listnum; }
+  main ol li { counter-increment: listnum; }
+  main ol li::before {
+    content: counter(listnum, decimal-leading-zero);
+    position: absolute; left: 0; top: 0;
+    font-family: 'Geist Mono', monospace;
+    font-size: 11px; color: var(--ink-4);
+  }
+
+  /* BLOCKQUOTE / INSIGHT */
+  main blockquote, .insight {
+    margin: 28px 0;
+    padding: 4px 0 4px 24px;
+    border-left: 2px solid var(--ink);
+    font-family: 'Geist', sans-serif;
+    font-size: 18px;
+    line-height: 1.5;
+    color: var(--ink);
+    letter-spacing: -0.015em;
+    font-weight: 400;
+  }
+  main blockquote cite, .insight cite {
+    display: block;
+    margin-top: 12px;
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px;
+    color: var(--ink-4);
+    font-style: normal;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  /* CODE BLOCKS */
+  pre {
+    margin: 20px 0;
+    padding: 18px 20px;
+    background: var(--code-bg);
+    border: 1px solid var(--code-border);
+    border-radius: 8px;
+    overflow-x: auto;
+    font-family: 'Geist Mono', monospace;
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: var(--ink-2);
+  }
+  pre code {
+    padding: 0; background: none; border: none;
+    font-size: inherit; color: inherit;
+  }
+
+  /* CALLOUTS */
+  .callout {
+    margin: 24px 0;
+    padding: 16px 20px;
+    border-radius: 8px;
+    border: 1px solid;
+    display: flex; gap: 14px;
+    align-items: flex-start;
+  }
+  .callout-icon {
+    flex-shrink: 0;
+    width: 16px; height: 16px;
+    margin-top: 2px;
+  }
+  .callout-body {
+    font-size: 13.5px; line-height: 1.6;
+    letter-spacing: -0.005em;
+    flex: 1;
+  }
+  .callout-body strong { font-weight: 500; }
+  .callout-body p { font-size: inherit; line-height: inherit; color: inherit; margin-bottom: 10px; }
+  .callout-body p:last-child { margin-bottom: 0; }
+  .callout-body ul li, .callout-body ol li {
+    font-size: 13.5px; color: inherit;
+  }
+  .callout-body ul li::before { background: currentColor; opacity: 0.7; }
+  .callout-label {
+    display: block;
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    margin-bottom: 4px; font-weight: 500;
+  }
+  .callout-info {
+    background: var(--info-bg); border-color: var(--info-border); color: var(--info-ink);
+  }
+  .callout-info .callout-icon { color: #0284c7; }
+  .callout-info code { background: rgba(255,255,255,0.6); border-color: var(--info-border); }
+  .callout-warn {
+    background: var(--warn-bg); border-color: var(--warn-border); color: var(--warn-ink);
+  }
+  .callout-warn .callout-icon { color: #d97706; }
+  .callout-warn code { background: rgba(255,255,255,0.6); border-color: var(--warn-border); }
+  .callout-ok {
+    background: var(--ok-bg); border-color: var(--ok-border); color: var(--ok-ink);
+  }
+  .callout-ok .callout-icon { color: #16a34a; }
+  .callout-ok code { background: rgba(255,255,255,0.6); border-color: var(--ok-border); }
+
+  /* NEUTRAL CALLOUT (Udforsk videre / Sådan læses den) */
+  .callout-neutral {
+    background: var(--tint);
+    border-color: var(--line);
+    color: var(--ink-2);
+  }
+  .callout-neutral .callout-icon { color: var(--ink-3); }
+  .callout-neutral .callout-label { color: var(--ink-3); }
+
+  /* TABLES */
+  .table-wrap {
+    margin: 24px 0;
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  thead { background: var(--tint); }
+  th {
+    text-align: left;
+    padding: 11px 16px;
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px; font-weight: 500;
+    letter-spacing: 0.05em; text-transform: uppercase;
+    color: var(--ink-3);
+    border-bottom: 1px solid var(--line);
+  }
+  td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--line-2);
+    color: var(--ink-2);
+    line-height: 1.55;
+    vertical-align: top;
+  }
+  tr:last-child td { border-bottom: none; }
+  td.col-label {
+    font-weight: 500;
+    color: var(--ink);
+    white-space: nowrap;
+  }
+  td.col-mono {
+    font-family: 'Geist Mono', monospace;
+    font-size: 12px;
+  }
+  td.col-hit { color: var(--ok-ink); }
+  td.col-miss { color: var(--ink-4); }
+  td.col-best {
+    font-weight: 500;
+    color: var(--ink);
+  }
+
+  /* DIAGRAM (figure with SVG inside) */
+  .diagram {
+    margin: 28px 0;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--bg);
+  }
+  .diagram svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    background: var(--tint);
+  }
+  .diagram-caption {
+    padding: 12px 18px;
+    font-family: 'Geist Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-3);
+    letter-spacing: 0.02em;
+    border-top: 1px solid var(--line);
+  }
+  .diagram-caption strong { color: var(--ink); font-weight: 500; margin-right: 8px; }
+
+  /* DETAILS / DYK DYBERE */
+  details.deep-dive {
+    margin: 24px 0;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--bg);
+    overflow: hidden;
+  }
+  details.deep-dive summary {
+    padding: 14px 18px;
+    font-family: 'Geist Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+    cursor: pointer;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: background 0.15s;
+  }
+  details.deep-dive summary::-webkit-details-marker { display: none; }
+  details.deep-dive summary::before {
+    content: '+';
+    font-family: 'Geist Mono', monospace;
+    font-weight: 500;
+    color: var(--ink-3);
+    font-size: 14px;
+    transition: transform 0.2s;
+  }
+  details.deep-dive[open] summary::before { content: '−'; }
+  details.deep-dive summary:hover { background: var(--tint); }
+  .deep-content {
+    padding: 4px 18px 18px 18px;
+    border-top: 1px solid var(--line);
+    background: var(--tint);
+  }
+  .deep-content p {
+    font-size: 14px;
+    line-height: 1.65;
+    color: var(--ink-2);
+    margin-bottom: 12px;
+  }
+  .deep-content p:last-child { margin-bottom: 0; }
+
+  /* DECISION LIST */
+  .decision-list {
+    margin: 28px 0;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .decision-row {
+    display: grid;
+    grid-template-columns: 160px 1fr;
+    border-bottom: 1px solid var(--line-2);
+  }
+  .decision-row:last-child { border-bottom: none; }
+  .decision-key {
+    padding: 16px 18px;
+    background: var(--tint);
+    border-right: 1px solid var(--line);
+    font-family: 'Geist Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .decision-val {
+    padding: 16px 20px;
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--ink-2);
+  }
+  .decision-val strong {
+    display: block;
+    color: var(--ink);
+    font-weight: 500;
+    margin-bottom: 4px;
+  }
+
+  /* SCORE LADDER */
+  .score-ladder {
+    margin: 24px 0;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .score-row {
+    display: grid;
+    grid-template-columns: 110px 1fr;
+    border-bottom: 1px solid var(--line-2);
+  }
+  .score-row:last-child { border-bottom: none; }
+  .score-range {
+    padding: 16px 18px;
+    background: var(--tint);
+    border-right: 1px solid var(--line);
+    font-family: 'Geist Mono', monospace;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+  }
+  .score-row.strong .score-range { color: var(--ok-ink); background: var(--ok-bg); border-right-color: var(--ok-border); }
+  .score-row.ok .score-range { color: var(--ink-2); }
+  .score-row.weak .score-range { color: var(--warn-ink); background: var(--warn-bg); border-right-color: var(--warn-border); }
+  .score-row.noise .score-range { color: var(--ink-4); }
+  .score-desc {
+    padding: 16px 20px;
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--ink-2);
+  }
+  .score-desc strong {
+    display: block;
+    color: var(--ink);
+    font-weight: 500;
+    margin-bottom: 4px;
+  }
+
+  /* GLOSSARY */
+  .glossary-grid {
+    display: grid;
+    gap: 16px;
+    margin: 24px 0;
+  }
+  .glossary-item {
+    padding: 16px 18px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--bg);
+    scroll-margin-top: 24px;
+  }
+  .glossary-term {
+    font-family: 'Geist', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--ink);
+    margin-bottom: 6px;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    letter-spacing: -0.01em;
+  }
+  .pronounce {
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px;
+    font-weight: 400;
+    color: var(--ink-4);
+    letter-spacing: 0.02em;
+  }
+  .glossary-def {
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: var(--ink-2);
+    letter-spacing: -0.005em;
+  }
+
+  /* RESOURCE LIST */
+  .resource-list {
+    display: grid;
+    gap: 10px;
+    margin: 24px 0;
+  }
+  .resource {
+    display: block;
+    padding: 16px 18px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--bg);
+    text-decoration: none !important;
+    color: inherit;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .resource:hover {
+    border-color: var(--ink-3);
+    background: var(--tint);
+  }
+  .resource-type {
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px;
+    color: var(--ink-4);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .resource-title {
+    font-family: 'Geist', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--ink);
+    margin-bottom: 4px;
+    letter-spacing: -0.01em;
+  }
+  .resource-desc {
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: var(--ink-3);
+    letter-spacing: -0.005em;
+  }
+
+  /* COLOPHON */
+  .colophon {
+    margin-top: 40px;
+    padding: 18px 20px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--tint);
+  }
+  .colophon p {
+    font-family: 'Geist Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-3);
+    margin-bottom: 4px;
+    letter-spacing: 0.02em;
+  }
+
+  /* CHAPTER FOOTER */
+  .chapter-footer {
+    margin-top: 72px;
+    padding-top: 32px;
+    border-top: 1px solid var(--line);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+  .chapter-footer-nav {
+    font-family: 'Geist Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-3);
+    letter-spacing: 0.02em;
+  }
+  .chapter-footer-nav a {
+    color: var(--ink);
+    text-decoration: none;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 2px;
+    transition: border-color 0.15s;
+  }
+  .chapter-footer-nav a:hover { border-bottom-color: var(--ink); }
+  .chapter-footer-meta {
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px;
+    color: var(--ink-4);
+    letter-spacing: 0.02em;
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 980px) {
+    .sheet { margin: 16px; }
+    .layout { grid-template-columns: 1fr; }
+    .toc {
+      position: static; height: auto;
+      border-right: none;
+      border-bottom: 1px solid var(--line);
+      padding: 32px 32px 24px;
+    }
+    .topbar { padding: 16px 32px; }
+    main { padding: 32px; max-width: none; }
+    h1 { font-size: 32px; }
+    h2 { font-size: 22px; }
+    .decision-row, .score-row { grid-template-columns: 1fr; }
+    .decision-key, .score-range {
+      border-right: none;
+      border-bottom: 1px solid var(--line);
+    }
+  }
+
+  /* STEP BLOCKS (til workflow) */
+  .step-list {
+    display: grid;
+    gap: 14px;
+    margin: 24px 0;
+  }
+  .step {
+    display: grid;
+    grid-template-columns: 44px 1fr;
+    gap: 16px;
+    padding: 18px 20px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--bg);
+  }
+  .step-num {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--ink);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Geist Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .step-body h3 {
+    margin: 0 0 6px 0;
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+  }
+  .step-body p {
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--ink-2);
+    margin-bottom: 0;
+  }
+  .step-body p + p { margin-top: 8px; }
+
+  /* QUICK REF — lille sammendrag-boks */
+  .quick-ref {
+    margin: 28px 0;
+    padding: 20px 22px;
+    background: var(--ink);
+    color: #ffffff;
+    border-radius: 10px;
+  }
+  .quick-ref-label {
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-4);
+    margin-bottom: 10px;
+  }
+  .quick-ref-body {
+    font-family: 'Geist Mono', monospace;
+    font-size: 13px;
+    line-height: 1.8;
+    color: #ffffff;
+  }
+  .quick-ref-body .arrow {
+    color: var(--ink-4);
+    margin: 0 6px;
+  }
+</style>
+</head>
+<body>
+
+<div id="progress"></div>
+
+<div class="sheet">
+
+  <header class="topbar">
+    <div class="topbar-left">
+      <div class="logo-dot"></div>
+      <span class="mono">RYAN VELIN · VIDENSBANK</span>
+    </div>
+    <div class="topbar-right">
+      <a href="index.html">← FORSIDE</a>
+    </div>
+  </header>
+
+  <div class="layout">
+
+    <aside class="toc">
+      <div class="toc-label">Indhold</div>
+      <ol>
+        <li><a href="#formaal">Hvad dette er</a></li>
+        <li><a href="#mappen">Den lokale mappe</a></li>
+        <li><a href="#flow">End-to-end flow</a></li>
+        <li><a href="#commits">Gode commit-beskeder</a></li>
+        <li><a href="#troubleshoot">Hvis noget driller</a></li>
+        <li><a href="#quick-ref">Quick reference</a></li>
+      </ol>
+    </aside>
+
+    <main>
+
+      <div class="chapter-hero">
+        <div class="chapter-hero-meta">
+          <span class="chapter-badge">Workflow</span>
+          <span class="chapter-time">~ 5 min læsetid</span>
+        </div>
+        <h1>End-to-end workflow.<br><span class="dim">Fra idé til live i browseren.</span></h1>
+        <p class="chapter-lede">
+          Præcis hvad du gør hver gang du vil have noget nyt op på vidensbanken — eller ændre noget der allerede ligger der. Drag-and-drop, GitHub Desktop, push. Ingen terminal.
+        </p>
+        <div class="hero-meta-row">
+          <div class="hero-meta-item">Værktøj<strong>GitHub Desktop</strong></div>
+          <div class="hero-meta-item">Lokal mappe<strong>~/Documents/GitHub/html-bank</strong></div>
+          <div class="hero-meta-item">Live-URL<strong>ryaveldk.github.io/html-bank</strong></div>
+        </div>
+      </div>
+
+      <!-- FORMAAL -->
+      <div class="divider">
+        <span class="divider-num">01</span>
+        <span class="divider-label">Formål</span>
+        <span class="divider-line"></span>
+      </div>
+
+      <h2 id="formaal">Hvad dette dokument er</h2>
+
+      <p>Det her er din huskeseddel til hvordan du vedligeholder vidensbanken uden at skulle åbne GitHub's webside, logge ind, uploade filer manuelt, eller lære git fra kommandolinjen. Alt foregår på din Mac — drag-and-drop i Finder og to klik i GitHub Desktop.</p>
+
+      <p>Dokumentet antager at setup'et allerede kører: GitHub Desktop er installeret, du er logget ind som <code>ryaveldk</code>, og <code>html-bank</code>-repo'et er clonet til <code>~/Documents/GitHub/html-bank/</code>. Hvis du skifter Mac eller genstarter setup'et, så find engangsopsætningen i en af vores tidligere samtaler.</p>
+
+      <!-- DEN LOKALE MAPPE -->
+      <div class="divider">
+        <span class="divider-num">02</span>
+        <span class="divider-label">Struktur</span>
+        <span class="divider-line"></span>
+      </div>
+
+      <h2 id="mappen">Den lokale mappe</h2>
+
+      <p>Din mappe <code>~/Documents/GitHub/html-bank/</code> er et 1:1-spejl af det der ligger live på GitHub Pages. Det du ser i Finder er præcis det der bliver til hjemmesiden. Sådan ser den ud:</p>
+
+      <pre><code>html-bank/
+├── index.html                    ← forside
+├── kapitel-01-embeddings.html    ← kapitel 01
+├── kapitel-02-rag.html           ← kapitel 02
+├── kapitel-03-fcp-nfs.html       ← kapitel 03
+├── kapitel-skabelon.html         ← skabelon (til fremtidige kapitler)
+└── workflow.html                 ← dette dokument</code></pre>
+
+      <p>Når vi tilføjer nye kapitler, får de navnet <code>kapitel-NN-kortnavn.html</code> — hvor NN er fortløbende nummer med nul-padding (04, 05, osv.) og kortnavn beskriver emnet kortfattet. Konventionen sikrer at filerne sorteres rigtigt i Finder og er nemme at finde.</p>
+
+      <div class="callout callout-info">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+        <div class="callout-body">
+          <span class="callout-label">Vigtig regel</span>
+          <p>Hver gang et nyt kapitel kommer til, opdateres <strong>både</strong> den nye kapitel-fil <strong>og</strong> <code>index.html</code> (så linket på forsiden virker). Jeg leverer altid begge i samme besked.</p>
+        </div>
+      </div>
+
+      <!-- END-TO-END FLOW -->
+      <div class="divider">
+        <span class="divider-num">03</span>
+        <span class="divider-label">Arbejdsgangen</span>
+        <span class="divider-line"></span>
+      </div>
+
+      <h2 id="flow">End-to-end flow — fra idé til live</h2>
+
+      <p>Her er det fulde flow fra du får en idé til den er live på nettet. Jeg har splittet det op i to scenarier: nyt kapitel (mest almindelig) og opdatering af eksisterende indhold.</p>
+
+      <h3>Scenarie A — Nyt kapitel</h3>
+
+      <div class="step-list">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <h3>Du beder mig om et nyt kapitel</h3>
+            <p>Fx: <em>"Lav kapitel 04 om vores FCP-pipeline fra ingest til delivery"</em>. Vær gerne specifik om hvad du vil have med — centrale emner, hvilke tools du vil nævne, hvem målgruppen er.</p>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <h3>Jeg leverer to filer</h3>
+            <p>I min næste besked: (1) den nye <code>kapitel-04-pipeline.html</code> (eller hvad vi kalder den) og (2) en opdateret <code>index.html</code> med link til det nye kapitel. Begge klar til drag-and-drop.</p>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <h3>Du trækker filerne ind i mappen</h3>
+            <p>Åbn Finder → <code>~/Documents/GitHub/html-bank/</code>. Træk begge filer ind. Mac'en spørger "Erstat?" når du trækker <code>index.html</code> — svar "Erstat". Den nye kapitel-fil er helt ny, så den lander uden at bede om noget.</p>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <h3>Åbn GitHub Desktop</h3>
+            <p>Den har automatisk registreret ændringerne. Du ser dem i venstre panel: "<code>index.html</code> modified" og "<code>kapitel-04-pipeline.html</code> added". Du kan klikke på hver fil for at se en diff — grønt = tilføjet, rødt = fjernet — men du behøver ikke.</p>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-num">5</div>
+          <div class="step-body">
+            <h3>Skriv en kort commit-besked</h3>
+            <p>I feltet nederst til venstre ("Summary"): <code>Add kapitel 04: FCP pipeline</code>. Kort, aktivt, beskrivende. Se <a href="#commits">Gode commit-beskeder</a> længere nede.</p>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-num">6</div>
+          <div class="step-body">
+            <h3>Klik "Commit to main"</h3>
+            <p>Knappen nederst til venstre. Ændringerne er nu gemt i din lokale Git-historik — men ikke oppe på GitHub endnu.</p>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-num">7</div>
+          <div class="step-body">
+            <h3>Klik "Push origin"</h3>
+            <p>Stor knap øverst. Nu ryger ændringerne op til GitHub, og GitHub Pages starter automatisk en ny deploy. Det tager typisk 30-60 sekunder før det er live på <code>ryaveldk.github.io/html-bank</code>.</p>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-num">8</div>
+          <div class="step-body">
+            <h3>Verificér i browseren</h3>
+            <p>Åbn <code>ryaveldk.github.io/html-bank</code> og hard-reload (⌘+Shift+R). Du skulle se det nye kapitel på forsiden. Klik dig ind og tjek at alt ser rigtigt ud.</p>
+          </div>
+        </div>
+      </div>
+
+      <h3>Scenarie B — Opdatering af eksisterende kapitel</h3>
+
+      <p>Samme flow, bare med ét enkelt skridt færre. Du beder om ændringen, jeg leverer en ny version af den eksisterende fil (fx opdateret <code>kapitel-02-rag.html</code>), du trækker den ind i mappen (erstatter den gamle), committer med fx <code>Update kapitel 02: tilføj afsnit om chunking-eksempler</code>, og pusher.</p>
+
+      <div class="callout callout-ok">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        <div class="callout-body">
+          <span class="callout-label">Samlet tid fra idé til live</span>
+          <p>Selve flowet fra du modtager filerne til de er live er ~45 sekunder. Den del der tager tid er selve skrivningen af indholdet — det varierer. Men commit-og-push-dansen er triviel når du først har den i fingrene.</p>
+        </div>
+      </div>
+
+      <!-- COMMIT-BESKEDER -->
+      <div class="divider">
+        <span class="divider-num">04</span>
+        <span class="divider-label">Bedste praksis</span>
+        <span class="divider-line"></span>
+      </div>
+
+      <h2 id="commits">Gode commit-beskeder</h2>
+
+      <p>Commit-beskeder fungerer som din historik. Om et halvt år vil du takke dig selv for at have skrevet noget læsbart. Tommelfingerreglen: <strong>aktiv verbum + hvad du gjorde</strong>. Engelsk eller dansk — vælg ét og vær konsekvent.</p>
+
+      <h3>Gode eksempler</h3>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Situation</th><th>Commit-besked</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Tilføj nyt kapitel</td><td class="col-mono"><code>Add kapitel 04: FCP pipeline</code></td></tr>
+            <tr><td>Opdatér et eksisterende kapitel</td><td class="col-mono"><code>Update kapitel 02: nyt afsnit om chunking</code></td></tr>
+            <tr><td>Ret en tastefejl eller lille detalje</td><td class="col-mono"><code>Fix typo i kapitel 01</code></td></tr>
+            <tr><td>Omdøb eller omstrukturér filer</td><td class="col-mono"><code>Rename kapitel 01 til nyt format</code></td></tr>
+            <tr><td>Design-ændring</td><td class="col-mono"><code>Redesign index: technical documentation style</code></td></tr>
+            <tr><td>Slet en fil der ikke skal være der</td><td class="col-mono"><code>Remove old setup-github-pages guide</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Undgå disse</h3>
+
+      <ul>
+        <li><code>"ændringer"</code>, <code>"opdatering"</code>, <code>"fix"</code> — siger intet om hvad der blev ændret</li>
+        <li><code>"asdf"</code>, <code>"test"</code>, <code>"."</code> — fristende når man har travlt, men meningsløst om 6 måneder</li>
+        <li>Lange essays — hold det på én linje, max 50-60 tegn</li>
+      </ul>
+
+      <!-- TROUBLESHOOTING -->
+      <div class="divider">
+        <span class="divider-num">05</span>
+        <span class="divider-label">Fejlsøgning</span>
+        <span class="divider-line"></span>
+      </div>
+
+      <h2 id="troubleshoot">Hvis noget driller</h2>
+
+      <h3>Ændringerne dukker ikke op på live-siden</h3>
+      <p>Første mistanke: GitHub Pages er ikke færdig med at bygge endnu. Vent 60 sekunder og hard-reload (⌘+Shift+R). Hvis det stadig ikke virker, tjek: har du faktisk klikket <strong>Push origin</strong> efter commit? Det er nemt at glemme. Commit alene lægger det kun lokalt.</p>
+
+      <h3>GitHub Desktop viser ikke mine ændringer</h3>
+      <p>Tjek at filerne faktisk ligger i den rigtige mappe: <code>~/Documents/GitHub/html-bank/</code>. Hvis du har trukket dem et andet sted hen ved et uheld, ser GitHub Desktop dem ikke. Ingen fejl — bare ingen ændringer.</p>
+
+      <h3>Jeg har uploadet noget forkert og vil gerne fortryde</h3>
+      <p>Hvis du har pushet, er ændringen oppe på GitHub og i Git-historikken. Men det kan stadig rulles tilbage: I GitHub Desktop → <strong>History</strong>-fanen øverst → højreklik på den commit du vil fortryde → <strong>Revert Changes in Commit</strong>. Det laver en ny commit der fjerner ændringen. Push den. Du har nu "slettet" den forkerte ændring uden at miste historikken.</p>
+      <p>Hvis du kun har committed (ikke pushed endnu), kan du højreklikke commit'en i History → <strong>Undo</strong>. Den forsvinder som om den aldrig var der.</p>
+
+      <h3>Der står "Your branch is behind origin/main"</h3>
+      <p>Det betyder at der er ændringer på GitHub som du ikke har lokalt. Kan ske hvis du har lavet en lille ændring direkte på GitHub's webside. GitHub Desktop foreslår <strong>Pull origin</strong> — klik det, og din lokale mappe synkroniseres med det nyeste. Derefter kan du arbejde videre normalt.</p>
+
+      <h3>Jeg får konflikter ("merge conflict")</h3>
+      <p>Sker hvis samme linje er ændret både lokalt og på GitHub. For solo-workflow som dit er det sjældent — men hvis det sker, sig til, så kigger vi på det sammen. Det kræver ikke terminal, men det kræver en kort gennemgang så vi løser den rigtige vej.</p>
+
+      <!-- QUICK REFERENCE -->
+      <div class="divider">
+        <span class="divider-num">06</span>
+        <span class="divider-label">Opslagsværk</span>
+        <span class="divider-line"></span>
+      </div>
+
+      <h2 id="quick-ref">Quick reference</h2>
+
+      <p>Det du vil kigge på hver gang, uden at skulle læse hele dokumentet:</p>
+
+      <div class="quick-ref">
+        <div class="quick-ref-label">Dagligt workflow</div>
+        <div class="quick-ref-body">
+          Bed om ændring
+          <span class="arrow">→</span>
+          modtag fil(er)
+          <span class="arrow">→</span>
+          træk ind i <code>~/Documents/GitHub/html-bank/</code>
+          <span class="arrow">→</span>
+          GitHub Desktop
+          <span class="arrow">→</span>
+          skriv commit-besked
+          <span class="arrow">→</span>
+          Commit to main
+          <span class="arrow">→</span>
+          Push origin
+          <span class="arrow">→</span>
+          live om 30-60 sek
+        </div>
+      </div>
+
+      <div class="quick-ref">
+        <div class="quick-ref-label">Vigtige links</div>
+        <div class="quick-ref-body">
+          Live side: <code>ryaveldk.github.io/html-bank</code><br>
+          Repo: <code>github.com/ryaveldk/html-bank</code><br>
+          Lokal mappe: <code>~/Documents/GitHub/html-bank/</code>
+        </div>
+      </div>
+
+      <h3>Fil-navngivnings-konvention</h3>
+
+      <ul>
+        <li><strong>Forside:</strong> <code>index.html</code></li>
+        <li><strong>Kapitler:</strong> <code>kapitel-NN-kortnavn.html</code> (fx <code>kapitel-04-pipeline.html</code>)</li>
+        <li><strong>Skabelon:</strong> <code>kapitel-skabelon.html</code> — ikke-publiceret, til reference</li>
+        <li><strong>Dette dokument:</strong> <code>workflow.html</code></li>
+      </ul>
+
+      <h3>Hvad jeg altid leverer</h3>
+
+      <p>Når du beder om noget nyt, leverer jeg altid det hele klar til drag-and-drop. Aldrig kodefragmenter du skal klistre ind i en eksisterende fil. Du bør aldrig skulle åbne en HTML-fil i en editor og finde den rigtige linje. Filerne kommer færdige — du trækker, committer, pusher.</p>
+
+      <div class="callout callout-neutral">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        <div class="callout-body">
+          <span class="callout-label">Én eksception</span>
+          Hvis du beder om en bittelille rettelse — fx "ret 'v1.1' til 'v1.2' i footeren" — kan det godt være hurtigere at du selv åbner filen i TextEdit og retter den ene linje. Men for alt andet: jeg leverer den færdige fil, du erstatter, commit, push.
+        </div>
+      </div>
+
+      <div class="colophon">
+        <p>Workflow · v1.0 · April 2026</p>
+        <p>GitHub Desktop-baseret arbejdsgang for vidensbanken</p>
+        <p>Internal · Metronome / Nordisk Film TV · Post-production</p>
+      </div>
+
+      <div class="chapter-footer">
+        <div class="chapter-footer-nav">
+          <a href="index.html">← Tilbage til forsiden</a>
+        </div>
+        <div class="chapter-footer-meta">
+          WORKFLOW · v1.0 · APRIL 2026
+        </div>
+      </div>
+
+    </main>
+
+  </div>
+
+</div>
+
+<script>
+  const progress = document.getElementById('progress');
+  window.addEventListener('scroll', () => {
+    const h = document.documentElement;
+    const pct = (h.scrollTop / (h.scrollHeight - h.clientHeight)) * 100;
+    progress.style.width = pct + '%';
+  });
+
+  const sections = document.querySelectorAll('main h2[id]');
+  const tocLinks = document.querySelectorAll('.toc a');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const id = entry.target.getAttribute('id');
+        tocLinks.forEach(link => {
+          link.classList.toggle('active', link.getAttribute('href') === '#' + id);
+        });
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+  sections.forEach(s => observer.observe(s));
+</script>
+
+</body>
+</html>

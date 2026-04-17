@@ -1,0 +1,2060 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kapitel 01 — Visuelle embeddings &amp; VisualScanner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #0a0a0a;
+    --ink-2: #262626;
+    --ink-3: #525252;
+    --ink-4: #a3a3a3;
+    --line: #ededed;
+    --line-2: #f5f5f5;
+    --bg: #ffffff;
+    --tint: #fafafa;
+    --signal: #0ea5e9;
+    --paper-bg: #f0f0ee;
+
+    --info-bg: #f0f9ff;
+    --info-border: #bae6fd;
+    --info-ink: #0c4a6e;
+
+    --warn-bg: #fffbeb;
+    --warn-border: #fde68a;
+    --warn-ink: #78350f;
+
+    --ok-bg: #f0fdf4;
+    --ok-border: #bbf7d0;
+    --ok-ink: #14532d;
+
+    --code-bg: #fafafa;
+    --code-border: #ededed;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; scroll-padding-top: 24px; }
+
+  body {
+    background: var(--paper-bg);
+    color: var(--ink);
+    font-family: 'Geist', -apple-system, sans-serif;
+    font-weight: 400;
+    -webkit-font-smoothing: antialiased;
+    font-feature-settings: 'ss01', 'cv11';
+    min-height: 100vh;
+  }
+
+  .mono { font-family: 'Geist Mono', ui-monospace, monospace; }
+
+  /* PROGRESS */
+  #progress {
+    position: fixed; top: 0; left: 0;
+    height: 2px; background: var(--ink);
+    z-index: 1000; width: 0;
+    transition: width 0.1s ease-out;
+  }
+
+  /* SHEET */
+  .sheet {
+    max-width: 1120px;
+    margin: 32px auto;
+    background: var(--bg);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 10px 40px rgba(0,0,0,0.06);
+    position: relative;
+  }
+
+  /* TOPBAR */
+  .topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 48px;
+    border-bottom: 1px solid var(--line);
+    font-size: 10px;
+    letter-spacing: 0.02em;
+  }
+  .topbar-left { display: flex; align-items: center; gap: 10px; color: var(--ink-3); }
+  .logo-dot {
+    width: 8px; height: 8px;
+    background: var(--ink); border-radius: 50%;
+    position: relative;
+  }
+  .logo-dot::after {
+    content: ''; position: absolute; inset: -3px;
+    border: 1px solid var(--ink); border-radius: 50%;
+    opacity: 0.2;
+  }
+  .topbar-right a {
+    color: var(--ink-3); text-decoration: none;
+    font-family: 'Geist Mono', monospace; font-size: 10px;
+    transition: color 0.15s;
+  }
+  .topbar-right a:hover { color: var(--ink); }
+
+  /* LAYOUT */
+  .layout {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+  }
+
+  /* TOC */
+  .toc {
+    position: sticky;
+    top: 0;
+    align-self: start;
+    height: 100vh;
+    overflow-y: auto;
+    padding: 48px 20px 40px 48px;
+    border-right: 1px solid var(--line);
+  }
+  .toc::-webkit-scrollbar { width: 4px; }
+  .toc::-webkit-scrollbar-thumb { background: var(--line); border-radius: 2px; }
+
+  .toc-label {
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px; font-weight: 500;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--ink-4); margin-bottom: 18px;
+  }
+
+  .toc ol { list-style: none; counter-reset: toc; }
+  .toc li { counter-increment: toc; }
+
+  .toc a {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 5px 10px 5px 10px;
+    margin-left: -10px;
+    font-size: 12.5px;
+    line-height: 1.35;
+    color: var(--ink-3);
+    text-decoration: none;
+    transition: color 0.15s;
+    border-left: 2px solid transparent;
+  }
+  .toc a::before {
+    content: counter(toc, decimal-leading-zero);
+    font-family: 'Geist Mono', monospace;
+    font-size: 9.5px;
+    color: var(--ink-4);
+    flex-shrink: 0;
+    padding-top: 1px;
+  }
+  .toc a:hover { color: var(--ink); }
+  .toc a.active {
+    color: var(--ink);
+    border-left-color: var(--ink);
+  }
+
+  /* MAIN */
+  main {
+    padding: 48px 64px 64px 64px;
+    max-width: 760px;
+  }
+
+  /* HERO */
+  .chapter-hero {
+    padding-bottom: 40px;
+    margin-bottom: 40px;
+    border-bottom: 1px solid var(--line);
+  }
+  .chapter-hero-meta {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 28px;
+  }
+  .chapter-badge {
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px; font-weight: 500;
+    letter-spacing: 0.04em; text-transform: uppercase;
+    color: var(--ink-3);
+    padding: 5px 9px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+  }
+  .chapter-time {
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px; color: var(--ink-4);
+    letter-spacing: 0.02em;
+  }
+  h1 {
+    font-family: 'Geist', sans-serif;
+    font-weight: 500; font-size: 42px;
+    line-height: 1.05;
+    letter-spacing: -0.035em;
+    color: var(--ink); margin-bottom: 20px;
+  }
+  h1 .dim { color: var(--ink-4); font-weight: 400; }
+  .chapter-lede {
+    font-size: 17px; line-height: 1.55;
+    color: var(--ink-2);
+    letter-spacing: -0.01em;
+  }
+  .hero-meta-row {
+    display: flex; gap: 32px; margin-top: 28px; flex-wrap: wrap;
+  }
+  .hero-meta-item {
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px; color: var(--ink-4);
+    text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .hero-meta-item strong {
+    display: block;
+    font-family: 'Geist', sans-serif;
+    font-size: 13px; color: var(--ink);
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: -0.01em;
+    margin-top: 4px;
+  }
+
+  /* SECTION DIVIDERS */
+  .divider {
+    display: flex; align-items: center; gap: 12px;
+    margin: 56px 0 24px 0;
+  }
+  .divider:first-child { margin-top: 0; }
+  .divider-num {
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px; color: var(--ink-4);
+  }
+  .divider-label {
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px; font-weight: 500;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--ink-3); white-space: nowrap;
+  }
+  .divider-line { flex: 1; height: 1px; background: var(--line); }
+
+  /* TYPOGRAPHY */
+  h2 {
+    font-family: 'Geist', sans-serif;
+    font-weight: 500; font-size: 26px;
+    line-height: 1.2;
+    letter-spacing: -0.025em;
+    color: var(--ink);
+    margin: 0 0 18px 0;
+    scroll-margin-top: 24px;
+  }
+  h3 {
+    font-family: 'Geist', sans-serif;
+    font-weight: 500; font-size: 17px;
+    line-height: 1.3;
+    letter-spacing: -0.015em;
+    color: var(--ink);
+    margin: 32px 0 12px 0;
+  }
+  h4 {
+    font-family: 'Geist Mono', monospace;
+    font-weight: 500; font-size: 11px;
+    letter-spacing: 0.05em; text-transform: uppercase;
+    color: var(--ink-3);
+    margin: 28px 0 10px 0;
+  }
+
+  main p {
+    font-size: 15px; line-height: 1.7;
+    color: var(--ink-2);
+    letter-spacing: -0.005em;
+    margin-bottom: 16px;
+  }
+  main p strong { color: var(--ink); font-weight: 500; }
+  main p em { font-style: italic; color: var(--ink); }
+
+  main p.lead {
+    font-size: 17px;
+    color: var(--ink);
+    margin-bottom: 22px;
+  }
+
+  main a {
+    color: var(--ink);
+    text-decoration: underline;
+    text-decoration-color: var(--ink-4);
+    text-underline-offset: 3px;
+    transition: text-decoration-color 0.15s;
+  }
+  main a:hover { text-decoration-color: var(--ink); }
+
+  main code {
+    font-family: 'Geist Mono', monospace;
+    font-size: 13px;
+    padding: 2px 6px;
+    background: var(--code-bg);
+    border: 1px solid var(--code-border);
+    border-radius: 4px;
+    color: var(--ink);
+  }
+
+  /* LISTS */
+  main ul, main ol {
+    margin: 0 0 20px 0;
+    padding-left: 0;
+    list-style: none;
+  }
+  main ul li, main ol li {
+    position: relative;
+    padding-left: 24px;
+    font-size: 15px; line-height: 1.7;
+    color: var(--ink-2);
+    margin-bottom: 8px;
+    letter-spacing: -0.005em;
+  }
+  main ul li strong, main ol li strong { color: var(--ink); font-weight: 500; }
+  main ul li::before {
+    content: '';
+    position: absolute; left: 8px; top: 12px;
+    width: 4px; height: 4px;
+    background: var(--ink-3); border-radius: 50%;
+  }
+  main ol { counter-reset: listnum; }
+  main ol li { counter-increment: listnum; }
+  main ol li::before {
+    content: counter(listnum, decimal-leading-zero);
+    position: absolute; left: 0; top: 0;
+    font-family: 'Geist Mono', monospace;
+    font-size: 11px; color: var(--ink-4);
+  }
+
+  /* BLOCKQUOTE / INSIGHT */
+  main blockquote, .insight {
+    margin: 28px 0;
+    padding: 4px 0 4px 24px;
+    border-left: 2px solid var(--ink);
+    font-family: 'Geist', sans-serif;
+    font-size: 18px;
+    line-height: 1.5;
+    color: var(--ink);
+    letter-spacing: -0.015em;
+    font-weight: 400;
+  }
+  main blockquote cite, .insight cite {
+    display: block;
+    margin-top: 12px;
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px;
+    color: var(--ink-4);
+    font-style: normal;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  /* CODE BLOCKS */
+  pre {
+    margin: 20px 0;
+    padding: 18px 20px;
+    background: var(--code-bg);
+    border: 1px solid var(--code-border);
+    border-radius: 8px;
+    overflow-x: auto;
+    font-family: 'Geist Mono', monospace;
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: var(--ink-2);
+  }
+  pre code {
+    padding: 0; background: none; border: none;
+    font-size: inherit; color: inherit;
+  }
+
+  /* CALLOUTS */
+  .callout {
+    margin: 24px 0;
+    padding: 16px 20px;
+    border-radius: 8px;
+    border: 1px solid;
+    display: flex; gap: 14px;
+    align-items: flex-start;
+  }
+  .callout-icon {
+    flex-shrink: 0;
+    width: 16px; height: 16px;
+    margin-top: 2px;
+  }
+  .callout-body {
+    font-size: 13.5px; line-height: 1.6;
+    letter-spacing: -0.005em;
+    flex: 1;
+  }
+  .callout-body strong { font-weight: 500; }
+  .callout-body p { font-size: inherit; line-height: inherit; color: inherit; margin-bottom: 10px; }
+  .callout-body p:last-child { margin-bottom: 0; }
+  .callout-body ul li, .callout-body ol li {
+    font-size: 13.5px; color: inherit;
+  }
+  .callout-body ul li::before { background: currentColor; opacity: 0.7; }
+  .callout-label {
+    display: block;
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    margin-bottom: 4px; font-weight: 500;
+  }
+  .callout-info {
+    background: var(--info-bg); border-color: var(--info-border); color: var(--info-ink);
+  }
+  .callout-info .callout-icon { color: #0284c7; }
+  .callout-info code { background: rgba(255,255,255,0.6); border-color: var(--info-border); }
+  .callout-warn {
+    background: var(--warn-bg); border-color: var(--warn-border); color: var(--warn-ink);
+  }
+  .callout-warn .callout-icon { color: #d97706; }
+  .callout-warn code { background: rgba(255,255,255,0.6); border-color: var(--warn-border); }
+  .callout-ok {
+    background: var(--ok-bg); border-color: var(--ok-border); color: var(--ok-ink);
+  }
+  .callout-ok .callout-icon { color: #16a34a; }
+  .callout-ok code { background: rgba(255,255,255,0.6); border-color: var(--ok-border); }
+
+  /* NEUTRAL CALLOUT (Udforsk videre / Sådan læses den) */
+  .callout-neutral {
+    background: var(--tint);
+    border-color: var(--line);
+    color: var(--ink-2);
+  }
+  .callout-neutral .callout-icon { color: var(--ink-3); }
+  .callout-neutral .callout-label { color: var(--ink-3); }
+
+  /* TABLES */
+  .table-wrap {
+    margin: 24px 0;
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  thead { background: var(--tint); }
+  th {
+    text-align: left;
+    padding: 11px 16px;
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px; font-weight: 500;
+    letter-spacing: 0.05em; text-transform: uppercase;
+    color: var(--ink-3);
+    border-bottom: 1px solid var(--line);
+  }
+  td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--line-2);
+    color: var(--ink-2);
+    line-height: 1.55;
+    vertical-align: top;
+  }
+  tr:last-child td { border-bottom: none; }
+  td.col-label {
+    font-weight: 500;
+    color: var(--ink);
+    white-space: nowrap;
+  }
+  td.col-mono {
+    font-family: 'Geist Mono', monospace;
+    font-size: 12px;
+  }
+  td.col-hit { color: var(--ok-ink); }
+  td.col-miss { color: var(--ink-4); }
+  td.col-best {
+    font-weight: 500;
+    color: var(--ink);
+  }
+
+  /* DIAGRAM (figure with SVG inside) */
+  .diagram {
+    margin: 28px 0;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--bg);
+  }
+  .diagram svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    background: var(--tint);
+  }
+  .diagram-caption {
+    padding: 12px 18px;
+    font-family: 'Geist Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-3);
+    letter-spacing: 0.02em;
+    border-top: 1px solid var(--line);
+  }
+  .diagram-caption strong { color: var(--ink); font-weight: 500; margin-right: 8px; }
+
+  /* DETAILS / DYK DYBERE */
+  details.deep-dive {
+    margin: 24px 0;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--bg);
+    overflow: hidden;
+  }
+  details.deep-dive summary {
+    padding: 14px 18px;
+    font-family: 'Geist Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+    cursor: pointer;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: background 0.15s;
+  }
+  details.deep-dive summary::-webkit-details-marker { display: none; }
+  details.deep-dive summary::before {
+    content: '+';
+    font-family: 'Geist Mono', monospace;
+    font-weight: 500;
+    color: var(--ink-3);
+    font-size: 14px;
+    transition: transform 0.2s;
+  }
+  details.deep-dive[open] summary::before { content: '−'; }
+  details.deep-dive summary:hover { background: var(--tint); }
+  .deep-content {
+    padding: 4px 18px 18px 18px;
+    border-top: 1px solid var(--line);
+    background: var(--tint);
+  }
+  .deep-content p {
+    font-size: 14px;
+    line-height: 1.65;
+    color: var(--ink-2);
+    margin-bottom: 12px;
+  }
+  .deep-content p:last-child { margin-bottom: 0; }
+
+  /* DECISION LIST */
+  .decision-list {
+    margin: 28px 0;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .decision-row {
+    display: grid;
+    grid-template-columns: 160px 1fr;
+    border-bottom: 1px solid var(--line-2);
+  }
+  .decision-row:last-child { border-bottom: none; }
+  .decision-key {
+    padding: 16px 18px;
+    background: var(--tint);
+    border-right: 1px solid var(--line);
+    font-family: 'Geist Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .decision-val {
+    padding: 16px 20px;
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--ink-2);
+  }
+  .decision-val strong {
+    display: block;
+    color: var(--ink);
+    font-weight: 500;
+    margin-bottom: 4px;
+  }
+
+  /* SCORE LADDER */
+  .score-ladder {
+    margin: 24px 0;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .score-row {
+    display: grid;
+    grid-template-columns: 110px 1fr;
+    border-bottom: 1px solid var(--line-2);
+  }
+  .score-row:last-child { border-bottom: none; }
+  .score-range {
+    padding: 16px 18px;
+    background: var(--tint);
+    border-right: 1px solid var(--line);
+    font-family: 'Geist Mono', monospace;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+  }
+  .score-row.strong .score-range { color: var(--ok-ink); background: var(--ok-bg); border-right-color: var(--ok-border); }
+  .score-row.ok .score-range { color: var(--ink-2); }
+  .score-row.weak .score-range { color: var(--warn-ink); background: var(--warn-bg); border-right-color: var(--warn-border); }
+  .score-row.noise .score-range { color: var(--ink-4); }
+  .score-desc {
+    padding: 16px 20px;
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--ink-2);
+  }
+  .score-desc strong {
+    display: block;
+    color: var(--ink);
+    font-weight: 500;
+    margin-bottom: 4px;
+  }
+
+  /* GLOSSARY */
+  .glossary-grid {
+    display: grid;
+    gap: 16px;
+    margin: 24px 0;
+  }
+  .glossary-item {
+    padding: 16px 18px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--bg);
+    scroll-margin-top: 24px;
+  }
+  .glossary-term {
+    font-family: 'Geist', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--ink);
+    margin-bottom: 6px;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    letter-spacing: -0.01em;
+  }
+  .pronounce {
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px;
+    font-weight: 400;
+    color: var(--ink-4);
+    letter-spacing: 0.02em;
+  }
+  .glossary-def {
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: var(--ink-2);
+    letter-spacing: -0.005em;
+  }
+
+  /* RESOURCE LIST */
+  .resource-list {
+    display: grid;
+    gap: 10px;
+    margin: 24px 0;
+  }
+  .resource {
+    display: block;
+    padding: 16px 18px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--bg);
+    text-decoration: none !important;
+    color: inherit;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .resource:hover {
+    border-color: var(--ink-3);
+    background: var(--tint);
+  }
+  .resource-type {
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px;
+    color: var(--ink-4);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .resource-title {
+    font-family: 'Geist', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--ink);
+    margin-bottom: 4px;
+    letter-spacing: -0.01em;
+  }
+  .resource-desc {
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: var(--ink-3);
+    letter-spacing: -0.005em;
+  }
+
+  /* COLOPHON */
+  .colophon {
+    margin-top: 40px;
+    padding: 18px 20px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--tint);
+  }
+  .colophon p {
+    font-family: 'Geist Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-3);
+    margin-bottom: 4px;
+    letter-spacing: 0.02em;
+  }
+
+  /* CHAPTER FOOTER */
+  .chapter-footer {
+    margin-top: 72px;
+    padding-top: 32px;
+    border-top: 1px solid var(--line);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+  .chapter-footer-nav {
+    font-family: 'Geist Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-3);
+    letter-spacing: 0.02em;
+  }
+  .chapter-footer-nav a {
+    color: var(--ink);
+    text-decoration: none;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 2px;
+    transition: border-color 0.15s;
+  }
+  .chapter-footer-nav a:hover { border-bottom-color: var(--ink); }
+  .chapter-footer-meta {
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px;
+    color: var(--ink-4);
+    letter-spacing: 0.02em;
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 980px) {
+    .sheet { margin: 16px; }
+    .layout { grid-template-columns: 1fr; }
+    .toc {
+      position: static; height: auto;
+      border-right: none;
+      border-bottom: 1px solid var(--line);
+      padding: 32px 32px 24px;
+    }
+    .topbar { padding: 16px 32px; }
+    main { padding: 32px; max-width: none; }
+    h1 { font-size: 32px; }
+    h2 { font-size: 22px; }
+    .decision-row, .score-row { grid-template-columns: 1fr; }
+    .decision-key, .score-range {
+      border-right: none;
+      border-bottom: 1px solid var(--line);
+    }
+  }
+</style>
+</head>
+<body>
+
+<div id="progress"></div>
+
+<div class="sheet">
+
+  <header class="topbar">
+    <div class="topbar-left">
+      <div class="logo-dot"></div>
+      <span class="mono">RYAN VELIN · VIDENSBANK</span>
+    </div>
+    <div class="topbar-right">
+      <a href="index.html">← FORSIDE</a>
+    </div>
+  </header>
+
+  <div class="layout">
+
+    <aside class="toc">
+      <div class="toc-label">Indhold</div>
+      <ol>
+        <li><a href="#intro">Forord</a></li>
+        <li><a href="#niveau-1">Som til en skoleelev</a></li>
+        <li><a href="#niveau-2">Embeddings &amp; vektorer</a></li>
+        <li><a href="#niveau-3">Cosine similarity</a></li>
+        <li><a href="#niveau-4">CLIP — modellen</a></li>
+        <li><a href="#pipeline">VisualScanner-pipelinen</a></li>
+        <li><a href="#landskab">Model-landskabet</a></li>
+        <li><a href="#mobileclip">Apple MobileCLIP 2</a></li>
+        <li><a href="#huggingface">Hugging Face</a></li>
+        <li><a href="#beslutning">Vores beslutning</a></li>
+        <li><a href="#praksis-intro">MobileCLIP i praksis</a></li>
+        <li><a href="#praksis-findings">Fem findings</a></li>
+        <li><a href="#praksis-visuelt">Visuelt vs. tematisk</a></li>
+        <li><a href="#praksis-scores">Score-kalibrering</a></li>
+        <li><a href="#praksis-queries">Enkeltord vs. sætninger</a></li>
+        <li><a href="#praksis-styrker">Styrker og svagheder</a></li>
+        <li><a href="#praksis-workflow">Arbejdsgang</a></li>
+        <li><a href="#fremtiden">Fremtiden &amp; Dashboard</a></li>
+        <li><a href="#ordbog">Ordbog</a></li>
+        <li><a href="#videre">Videre læsning</a></li>
+      </ol>
+    </aside>
+
+    <main>
+
+      <div class="chapter-hero">
+        <div class="chapter-hero-meta">
+          <span class="chapter-badge">Kapitel 01</span>
+          <span class="chapter-time">~ 40 min læsetid</span>
+        </div>
+        <h1>Hvordan computere ser video<br><span class="dim">— og finder det de leder efter.</span></h1>
+        <p class="chapter-lede">
+          En guide til visuelle embeddings, CLIP-modeller, og hvorfor vi skifter VisualScanner over på Apples MobileCLIP 2. Plus hands-on findings fra første test på rigtige produktionsdata. Skrevet til at læses fra start til slut, eller hoppes rundt i efter behov.
+        </p>
+        <div class="hero-meta-row">
+          <div class="hero-meta-item">Læsetid<strong>~ 40 min</strong></div>
+          <div class="hero-meta-item">Forudsætninger<strong>Ingen</strong></div>
+          <div class="hero-meta-item">Niveau<strong>Begynder → Praktisk</strong></div>
+        </div>
+      </div>
+
+      <!-- ═══════════════ 00 FORORD ═══════════════ -->
+      <div class="divider">
+        <span class="divider-num">00</span>
+        <span class="divider-label">Forord</span>
+        <span class="divider-line"></span>
+      </div>
+
+      <h2 id="intro">Hvorfor denne vidensbank</h2>
+
+      <p class="lead">Den her er bygget fordi du sagde det: du er et rodehoved, og du vil ikke begynde forfra hver gang. Den samler alt vi har talt om i én læsbar form, så du kan vende tilbage uden at åbne en gammel chat.</p>
+
+      <p>Den er bygget til at læses i lag. Først som til en skoleelev — fordi god forståelse begynder med en god metafor. Så bygges der på, lag for lag, indtil vi er nede i de tekniske valg vi faktisk skal tage for VisualScanner. Du behøver ikke læse det hele i ét flow. Sektionerne er selvstændige, og du kan altid hoppe til <a href="#ordbog">ordbogen</a> nederst hvis et udtryk forsvinder ud af hovedet.</p>
+
+      <div class="callout callout-neutral">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+        <div class="callout-body">
+          <span class="callout-label">Sådan læses den</span>
+          Klik på links i teksten for at hoppe til ordbogen nederst. Fold "Dyk dybere"-felter ud når du vil have detaljerne. Følg "Udforsk videre"-bokse hvis du har lyst til at lære mere ad sidespor.
+        </div>
+      </div>
+
+      <!-- ═══════════════ 01 NIVEAU 1 ═══════════════ -->
+      <div class="divider">
+        <span class="divider-num">01</span>
+        <span class="divider-label">Det grundlæggende</span>
+        <span class="divider-line"></span>
+      </div>
+
+      <h2 id="niveau-1">Som til en skoleelev</h2>
+
+      <p>Forestil dig at du har 1.000 timers videooptagelser, og du vil finde "den scene hvor en mand står på en strand ved solnedgang". I gamle dage skulle nogen sidde og se <em>alle</em> videoerne igennem og skrive ned hvad der var i dem — kedeligt og nærmest umuligt.</p>
+
+      <p>En videoscannings-model er en computer-bibliotekar der gør det automatisk. Men i stedet for at skrive <em>ord</em> om hvert billede, skriver den en lang <strong>talkode</strong> — sådan en der måske ser ud som <code>[0.23, -0.41, 0.88, 0.12, ...]</code> med 512 tal i alt.</p>
+
+      <blockquote>
+        Billeder der ligner hinanden får talkoder der ligner hinanden.
+        <cite>Den centrale idé</cite>
+      </blockquote>
+
+      <p>Et solnedgangs-billede fra Mallorca og et solnedgangs-billede fra Møn får meget ens talkoder. Et billede af en kontorfest får en helt anden.</p>
+
+      <p>Når du så senere skriver "mand på strand ved solnedgang", oversætter <em>samme model</em> dine ord til samme slags talkode. Computeren kigger på alle de gemte talkoder, finder dem der ligner mest, og viser dig de billeder. Det er hele tricket.</p>
+
+      <div class="callout callout-neutral">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        <div class="callout-body">
+          <span class="callout-label">Udforsk videre</span>
+          Tænk over: hvis billeder kan oversættes til talkoder, hvad kan så også? Lyd? Tekstdokumenter? PDF'er? Ja — alle disse kan lægges i samme slags "talkode-bibliotek". Det er det Spotify gør for at finde sange der ligner hinanden, og det er det moderne søgemaskiner gør under motorhjelmen. Princippet er det samme.
+        </div>
+      </div>
+
+      <!-- ═══════════════ 02 EMBEDDINGS ═══════════════ -->
+      <div class="divider">
+        <span class="divider-num">02</span>
+        <span class="divider-label">Det første tekniske lag</span>
+        <span class="divider-line"></span>
+      </div>
+
+      <h2 id="niveau-2">Embeddings &amp; vektorer</h2>
+
+      <p class="lead">Talkoden hedder en <a href="#embedding">embedding</a>. På dansk siger nogle "indlejring", men ingen rigtig bruger det ord.</p>
+
+      <p>En embedding er en <a href="#vektor">vektor</a> — en liste af tal med fast længde. I VisualScanners tilfælde 512 tal per billede. Når vi opgraderer til MobileCLIP 2-S4 bliver det formentlig flere tal — 768 eller 1024 — fordi modellen er "klogere" og bruger flere dimensioner til at beskrive nuancerne.</p>
+
+      <p>Modellen der laver disse vektorer hedder <a href="#clip">CLIP</a>. Den blev trænet ved at få vist hundredevis af millioner af billeder fra internettet sammen med deres billedtekster. Over tid lærte den at producere vektorer hvor <em>både</em> "billedet af manden på stranden" <em>og</em> teksten "a man on a beach at sunset" lander samme sted i tal-rummet.</p>
+
+      <blockquote>
+        Tekst og billede oversættes til samme matematiske rum.
+        <cite>Det vigtigste gennembrud i CLIP</cite>
+      </blockquote>
+
+      <p>Det er det der gør semantisk søgning mulig. Du skriver ord — modellen finder billeder. Du smider et billede ind — modellen finder lignende billeder. Begge dele virker fordi tekst og billede er oversat til samme slags tal-format.</p>
+
+      <h4>For din video sker dette:</h4>
+      <ol>
+        <li>Video pakkes ud i enkelt-billeder (frames) — typisk ét per sekund</li>
+        <li>Hvert frame sendes gennem CLIP-modellen</li>
+        <li>Ud kommer 512 tal per frame</li>
+        <li>Tallene gemmes i en fil sammen med <a href="#timecode">tidskoden</a></li>
+      </ol>
+
+      <p>Et 10-minutters klip = 600 frames = 600 vektorer = en lille fil på ca. 1 MB. Sammenlignet med selve videoen (måske 5 GB) er det forsvindende lidt.</p>
+
+      <details class="deep-dive">
+        <summary>Dyk dybere — hvorfor 512 tal og ikke flere?</summary>
+        <div class="deep-content">
+          <p>Tallene kaldes "dimensioner". Flere dimensioner betyder finere nuancering, men også større filer og langsommere sammenligning. 512 var et godt kompromis i 2021. Nyere modeller bruger 768 eller 1024 fordi hardware er blevet hurtigere og lagerplads billigere. Vores opgradering til MobileCLIP 2-S4 går sandsynligvis op i dimension — men forskellen i søgekvalitet er typisk større end forskellen i ressourceforbrug.</p>
+        </div>
+      </details>
+
+      <!-- ═══════════════ 03 COSINE SIMILARITY ═══════════════ -->
+      <div class="divider">
+        <span class="divider-num">03</span>
+        <span class="divider-label">Sammenligning</span>
+        <span class="divider-line"></span>
+      </div>
+
+      <h2 id="niveau-3">Cosine similarity</h2>
+
+      <p class="lead">Hvordan måler en computer egentlig at to vektorer "ligner hinanden"? Med en simpel matematisk operation der hedder <a href="#cosine">cosine similarity</a>.</p>
+
+      <p>Forestil dig at hver vektor er en pil der peger ud i et rum. Hvis to pile peger samme vej, ligner de hinanden. Hvis de peger vinkelret på hinanden, har de intet med hinanden at gøre. Hvis de peger modsat vej, er de fuldkommen forskellige.</p>
+
+      <div class="diagram">
+        <svg viewBox="0 0 600 280" xmlns="http://www.w3.org/2000/svg">
+          <!-- origin -->
+          <circle cx="300" cy="240" r="3" fill="#0a0a0a"/>
+          <text x="307" y="255" font-family="Geist Mono, monospace" font-size="10" fill="#525252">origo</text>
+
+          <!-- vector A: solnedgang Mallorca -->
+          <line x1="300" y1="240" x2="470" y2="80" stroke="#0a0a0a" stroke-width="2"/>
+          <circle cx="470" cy="80" r="4" fill="#0a0a0a"/>
+          <text x="478" y="78" font-family="Geist Mono, monospace" font-size="11" fill="#0a0a0a">solnedgang Mallorca</text>
+
+          <!-- vector B: solnedgang Møn (very close) -->
+          <line x1="300" y1="240" x2="450" y2="100" stroke="#0a0a0a" stroke-width="2"/>
+          <circle cx="450" cy="100" r="4" fill="#0a0a0a"/>
+          <text x="458" y="115" font-family="Geist Mono, monospace" font-size="11" fill="#0a0a0a">solnedgang Møn</text>
+
+          <!-- vector C: kontorfest (far away) -->
+          <line x1="300" y1="240" x2="120" y2="120" stroke="#525252" stroke-width="2" stroke-dasharray="4,3"/>
+          <circle cx="120" cy="120" r="4" fill="#525252"/>
+          <text x="40" y="110" font-family="Geist Mono, monospace" font-size="11" fill="#525252">kontorfest</text>
+
+          <!-- arc showing small angle between A and B -->
+          <path d="M 380 165 A 80 80 0 0 1 395 145" fill="none" stroke="#0ea5e9" stroke-width="1.5"/>
+          <text x="385" y="178" font-family="Geist Mono, monospace" font-size="9" fill="#0ea5e9">~5°</text>
+
+          <!-- arc showing large angle between A and C -->
+          <path d="M 360 195 A 90 90 0 0 0 215 195" fill="none" stroke="#a3a3a3" stroke-width="1" stroke-dasharray="2,2"/>
+          <text x="265" y="220" font-family="Geist Mono, monospace" font-size="9" fill="#a3a3a3">~95°</text>
+
+          <text x="300" y="265" font-family="Geist Mono, monospace" font-size="9" fill="#a3a3a3" text-anchor="middle">tal-rummet (vist i 2D for forståelse, faktisk 512 dimensioner)</text>
+        </svg>
+        <div class="diagram-caption"><strong>Fig. 1.</strong> Ens billeder peger samme vej. Forskellige peger forskelligt.</div>
+      </div>
+
+      <p>Resultatet af cosine similarity er et tal mellem −1 og 1:</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Score</th><th>Betydning</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="col-mono col-label">1.0</td><td>Identiske billeder. Samme retning, samme vektor.</td></tr>
+            <tr><td class="col-mono col-label">0.85</td><td>Meget tæt på — typisk hvad to solnedgangs-billeder ligner hinanden med.</td></tr>
+            <tr><td class="col-mono col-label">0.30</td><td>Lidt beslægtet — måske begge billeder af mennesker, men i meget forskellige situationer.</td></tr>
+            <tr><td class="col-mono col-label">0.00</td><td>Ikke relateret. Vektorerne peger vinkelret på hinanden.</td></tr>
+            <tr><td class="col-mono col-label">−1.0</td><td>Modsat retning. Sjældent i praksis — virkelige billeder er aldrig "modsat" hinanden i denne forstand.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>Grunden til at man skriver <a href="#l2">"L2-normaliseret"</a> om embeddings er at vektorerne er skaleret så de alle har længde 1. Det betyder at kun <em>retningen</em> tæller — ikke hvor "kraftigt" et billede er. Det gør sammenligning hurtigt og fair.</p>
+
+      <details class="deep-dive">
+        <summary>Dyk dybere — hvorfor virker dette overhovedet?</summary>
+        <div class="deep-content">
+          <p>Det er et godt spørgsmål, og svaret er næsten filosofisk. Når CLIP trænes, tvinges modellen til at finde en måde at kode et billede på som er <em>nyttig</em> til at matche med tekst. Den kan ikke "huske" alle billeder — der er for mange. Den må udvikle en intern repræsentation der fanger <em>essensen</em>: er der mennesker? Er det udendørs? Hvilken tid på dagen? Hvilken stemning?</p>
+          <p>De 512 tal er ikke menneskeforståelige hver for sig — det er ikke sådan at "tal nr. 47 er solnedgang-tallet". De fungerer i samspil. Men når modellen ser to billeder med samme grundlæggende egenskaber, ender de samme sted i tal-rummet, fordi det er den eneste måde modellen kan løse sin opgave effektivt på.</p>
+          <p>Det er en form for emergens — modellen "opdager" semantik gennem ren statistisk træning. Ingen har programmeret den til at vide hvad solnedgang er. Den har bare set så mange eksempler at den har dannet en intern "solnedgangs-region" i tal-rummet.</p>
+        </div>
+      </details>
+
+
+      <!-- ═══════════════ 04 CLIP ═══════════════ -->
+      <div class="divider">
+        <span class="divider-num">04</span>
+        <span class="divider-label">Modellen</span>
+        <span class="divider-line"></span>
+      </div>
+
+      <h2 id="niveau-4">CLIP — hvordan tekst og billede mødes</h2>
+
+      <p class="lead">CLIP står for <strong>Contrastive Language-Image Pre-training</strong>. Det er den oprindelige arkitektur, udgivet af OpenAI i 2021, som hele dette felt bygger videre på.</p>
+
+      <p>Pointen med navnet: <em>contrastive</em> betyder at modellen lærer ved at <strong>kontrastere</strong> rigtige billede–tekst-par mod forkerte. <em>Language-Image</em> fortæller at den arbejder med begge modaliteter. <em>Pre-training</em> betyder at den er trænet på en kæmpe generel mængde data, så den kan bruges til mange forskellige opgaver bagefter.</p>
+
+      <h3>Sådan fungerer træningen</h3>
+
+      <p>OpenAI samlede 400 millioner billeder fra internettet sammen med deres alt-tekster. For hver træningsbatch på, lad os sige, 1.000 billeder havde de altså 1.000 rigtige par.</p>
+
+      <p>Modellen blev så stillet en opgave: <strong>find for hvert billede den rigtige beskrivelse blandt alle 1.000 muligheder</strong>. Hvis modellen gættede rigtigt, blev den belønnet. Hvis den gættede forkert, blev den justeret en lille smule.</p>
+
+      <p>Gentag dette milliarder af gange, og modellen lærer gradvist at producere vektorer hvor:</p>
+      <ul>
+        <li>Et billede og dets <em>rigtige</em> tekstbeskrivelse ender meget tæt på hinanden i vektor-rummet</li>
+        <li>Et billede og en <em>forkert</em> tekstbeskrivelse ender langt fra hinanden</li>
+      </ul>
+
+      <p>Det er hele træningsprincippet. Resten er computation.</p>
+
+      <div class="diagram">
+        <svg viewBox="0 0 600 240" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="arr-04" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+              <path d="M0,0 L6,3 L0,6 Z" fill="#525252"/>
+            </marker>
+          </defs>
+
+          <!-- Image side -->
+          <rect x="40" y="40" width="180" height="120" fill="#fafafa" stroke="#ededed" rx="4"/>
+          <text x="130" y="100" font-family="Geist, sans-serif" font-style="italic" font-size="14" fill="#525252" text-anchor="middle">[ billede ]</text>
+          <text x="130" y="180" font-family="Geist Mono, monospace" font-size="10" fill="#0a0a0a" text-anchor="middle">image encoder</text>
+
+          <path d="M 230 100 L 280 100" stroke="#525252" stroke-width="1.5" marker-end="url(#arr-04)"/>
+
+          <text x="300" y="105" font-family="Geist Mono, monospace" font-size="10" fill="#0a0a0a">[0.23, -0.41, ...]</text>
+
+          <path d="M 420 100 L 470 100" stroke="#525252" stroke-width="1.5" marker-end="url(#arr-04)"/>
+
+          <circle cx="520" cy="100" r="40" fill="none" stroke="#0ea5e9" stroke-width="1.5" stroke-dasharray="3,3"/>
+          <text x="520" y="98" font-family="Geist, sans-serif" font-style="italic" font-size="11" fill="#0a0a0a" text-anchor="middle">shared</text>
+          <text x="520" y="113" font-family="Geist, sans-serif" font-style="italic" font-size="11" fill="#0a0a0a" text-anchor="middle">space</text>
+
+          <rect x="40" y="180" width="180" height="40" fill="#fafafa" stroke="#ededed" rx="4"/>
+          <text x="130" y="206" font-family="Geist, sans-serif" font-style="italic" font-size="12" fill="#525252" text-anchor="middle">"a man on a beach"</text>
+
+          <path d="M 230 200 Q 270 200 290 130" stroke="#525252" stroke-width="1.5" fill="none" marker-end="url(#arr-04)"/>
+          <text x="240" y="155" font-family="Geist Mono, monospace" font-size="9" fill="#0a0a0a">text encoder</text>
+        </svg>
+        <div class="diagram-caption"><strong>Fig. 2.</strong> To encoders, ét fælles rum. Begge endpoints producerer vektorer der kan sammenlignes direkte.</div>
+      </div>
+
+      <h3>Hvad CLIP ikke kan</h3>
+
+      <p>CLIP forstår ikke i menneskelig forstand. Den kan ikke svare på spørgsmål, ikke beskrive billeder med ord, ikke tælle objekter præcist. Det er en <strong>match-maker</strong>, ikke en historiefortæller. Den er god til at sige "disse to ting hører sammen", men ikke til at fortælle hvorfor.</p>
+
+      <p>Det er en vigtig begrænsning at huske. Når VisualScanner finder de bedste matches, er den ikke "kommet med en mening" — den har bare beregnet hvilke vektorer der peger samme vej. Editoren der bruger søgningen, skal selv vurdere om resultaterne faktisk er det de leder efter.</p>
+
+      <div class="callout callout-neutral">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        <div class="callout-body">
+          <span class="callout-label">Udforsk videre</span>
+          Hvis du vil have en model der både matcher OG beskriver, leder du efter en <strong>VLM</strong> (Vision-Language Model) — fx GPT-4V, Claude 3 Vision, eller Apples FastVLM. De er meget kraftigere men også meget tungere. CLIP-familien er specialiseret i hurtig retrieval. VLM'er er specialiseret i forståelse. De er forskellige værktøjer.
+        </div>
+      </div>
+
+      <!-- ═══════════════ 05 PIPELINE ═══════════════ -->
+      <div class="divider">
+        <span class="divider-num">05</span>
+        <span class="divider-label">I praksis</span>
+        <span class="divider-line"></span>
+      </div>
+
+      <h2 id="pipeline">VisualScanner-pipelinen</h2>
+
+      <p class="lead">Når du som bruger skriver "find scener med morgenlys over vand" sker dette under motorhjelmen — i to faser.</p>
+
+      <h3>Index-fasen (engang, på forhånd)</h3>
+
+      <ol>
+        <li>Alle videoklip scannes en gang</li>
+        <li>ffmpeg pakker hver video ud i enkelt-frames (1 per sekund som standard)</li>
+        <li>Hvert frame sendes gennem CLIP image encoder</li>
+        <li>Ud kommer en 512-tal vektor per frame</li>
+        <li>Vektor + tidskode + filsti gemmes i en <code>.bin</code>-fil per klip, sammen med en <code>.json</code> med metadata</li>
+      </ol>
+
+      <p>Det er det VisualScanner gør i dag. Det er den tunge del — for et stort arkiv kan det tage timer eller dage. Men det skal kun gøres én gang per klip.</p>
+
+      <h3>Søge-fasen (hver gang du søger)</h3>
+
+      <ol>
+        <li>Din tekst sendes gennem CLIP <em>text</em> encoder → 512-tal vektor (samme rum som billederne)</li>
+        <li>Computeren beregner cosine similarity mellem din tekst-vektor og <em>alle</em> de gemte billed-vektorer</li>
+        <li>Sorter efter højeste similarity</li>
+        <li>Vis de øverste 20 frames som resultater — med klipnavn og tidskode så editoren kan springe direkte til dem i FCP</li>
+      </ol>
+
+      <p>Søgning er hurtig. At sammenligne én tekst-vektor mod 100.000 billed-vektorer tager millisekunder, ikke sekunder.</p>
+
+      <div class="diagram">
+        <svg viewBox="0 0 620 280" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="arr-05" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+              <path d="M0,0 L6,3 L0,6 Z" fill="#525252"/>
+            </marker>
+          </defs>
+
+          <text x="20" y="30" font-family="Geist Mono, monospace" font-size="10" fill="#0a0a0a" letter-spacing="1.5" font-weight="500">INDEX-FASEN</text>
+
+          <rect x="20" y="45" width="80" height="40" fill="#fafafa" stroke="#ededed" rx="3"/>
+          <text x="60" y="69" font-family="Geist Mono, monospace" font-size="10" fill="#525252" text-anchor="middle">video.mov</text>
+
+          <path d="M 100 65 L 130 65" stroke="#525252" stroke-width="1" marker-end="url(#arr-05)"/>
+
+          <rect x="130" y="45" width="80" height="40" fill="#fafafa" stroke="#ededed" rx="3"/>
+          <text x="170" y="62" font-family="Geist Mono, monospace" font-size="9" fill="#525252" text-anchor="middle">ffmpeg</text>
+          <text x="170" y="76" font-family="Geist Mono, monospace" font-size="9" fill="#a3a3a3" text-anchor="middle">→ frames</text>
+
+          <path d="M 210 65 L 240 65" stroke="#525252" stroke-width="1" marker-end="url(#arr-05)"/>
+
+          <rect x="240" y="45" width="80" height="40" fill="#fafafa" stroke="#ededed" rx="3"/>
+          <text x="280" y="62" font-family="Geist Mono, monospace" font-size="9" fill="#525252" text-anchor="middle">CLIP</text>
+          <text x="280" y="76" font-family="Geist Mono, monospace" font-size="9" fill="#a3a3a3" text-anchor="middle">image enc</text>
+
+          <path d="M 320 65 L 350 65" stroke="#525252" stroke-width="1" marker-end="url(#arr-05)"/>
+
+          <rect x="350" y="45" width="100" height="40" fill="#fafafa" stroke="#0ea5e9" rx="3"/>
+          <text x="400" y="62" font-family="Geist Mono, monospace" font-size="9" fill="#0a0a0a" text-anchor="middle">[vektorer]</text>
+          <text x="400" y="76" font-family="Geist Mono, monospace" font-size="9" fill="#a3a3a3" text-anchor="middle">L2-normaliseret</text>
+
+          <path d="M 450 65 L 480 65" stroke="#525252" stroke-width="1" marker-end="url(#arr-05)"/>
+
+          <rect x="480" y="45" width="100" height="40" fill="#fafafa" stroke="#ededed" rx="3"/>
+          <text x="530" y="62" font-family="Geist Mono, monospace" font-size="9" fill="#525252" text-anchor="middle">.bin + .json</text>
+          <text x="530" y="76" font-family="Geist Mono, monospace" font-size="9" fill="#a3a3a3" text-anchor="middle">gemmes</text>
+
+          <line x1="20" y1="125" x2="600" y2="125" stroke="#ededed" stroke-dasharray="3,3"/>
+
+          <text x="20" y="155" font-family="Geist Mono, monospace" font-size="10" fill="#0a0a0a" letter-spacing="1.5" font-weight="500">SØGE-FASEN</text>
+
+          <rect x="20" y="170" width="120" height="40" fill="#fafafa" stroke="#ededed" rx="3"/>
+          <text x="80" y="194" font-family="Geist, sans-serif" font-style="italic" font-size="11" fill="#525252" text-anchor="middle">"morgenlys over vand"</text>
+
+          <path d="M 140 190 L 170 190" stroke="#525252" stroke-width="1" marker-end="url(#arr-05)"/>
+
+          <rect x="170" y="170" width="80" height="40" fill="#fafafa" stroke="#ededed" rx="3"/>
+          <text x="210" y="187" font-family="Geist Mono, monospace" font-size="9" fill="#525252" text-anchor="middle">CLIP</text>
+          <text x="210" y="201" font-family="Geist Mono, monospace" font-size="9" fill="#a3a3a3" text-anchor="middle">text enc</text>
+
+          <path d="M 250 190 L 280 190" stroke="#525252" stroke-width="1" marker-end="url(#arr-05)"/>
+
+          <rect x="280" y="170" width="120" height="40" fill="#fafafa" stroke="#0ea5e9" rx="3"/>
+          <text x="340" y="187" font-family="Geist Mono, monospace" font-size="9" fill="#0a0a0a" text-anchor="middle">cosine similarity</text>
+          <text x="340" y="201" font-family="Geist Mono, monospace" font-size="9" fill="#a3a3a3" text-anchor="middle">vs alle vektorer</text>
+
+          <path d="M 400 190 L 430 190" stroke="#525252" stroke-width="1" marker-end="url(#arr-05)"/>
+
+          <rect x="430" y="170" width="150" height="40" fill="#fafafa" stroke="#ededed" rx="3"/>
+          <text x="505" y="187" font-family="Geist Mono, monospace" font-size="9" fill="#525252" text-anchor="middle">Top 20 resultater</text>
+          <text x="505" y="201" font-family="Geist Mono, monospace" font-size="9" fill="#a3a3a3" text-anchor="middle">klip + timecode</text>
+
+          <text x="310" y="245" font-family="Geist Mono, monospace" font-size="9" fill="#a3a3a3" text-anchor="middle">Editoren springer direkte til frame i FCP</text>
+        </svg>
+        <div class="diagram-caption"><strong>Fig. 3.</strong> Pipelinen i to faser. Indeksering er tung men engangs. Søgning er let og kan køres uendelig mange gange.</div>
+      </div>
+
+      <h3>Hvorfor dette er kraftigt</h3>
+      <ul>
+        <li>Ingen manuel tagging eller logging — modellen ser <em>alt</em></li>
+        <li>Du kan søge efter ting der <em>aldrig blev nævnt</em> da klippet blev optaget</li>
+        <li>Du kan søge efter abstrakte begreber: "ensomhed", "kaos", "nostalgi" — CLIP forstår stemninger fordi den er trænet på menneskeskrevne billedtekster der bruger den slags ord</li>
+        <li>Søgningen er hurtig nok til at føles som realtid</li>
+      </ul>
+
+
+      <!-- ═══════════════ 06 LANDSKABET ═══════════════ -->
+      <div class="divider">
+        <span class="divider-num">06</span>
+        <span class="divider-label">Modellerne</span>
+        <span class="divider-line"></span>
+      </div>
+
+      <h2 id="landskab">Model-landskabet</h2>
+
+      <p class="lead">CLIP er navnet på den oprindelige arkitektur, men siden 2021 er der kommet flere generationer og varianter. Her er det forenklet kort.</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Model</th><th>Karakter</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="col-label">CLIP (OpenAI, 2021)</td>
+              <td>Originalen. ViT-B/32 er den letteste, ViT-L/14 den tungeste. MIT-licens, frit tilgængelig. Hvad VisualScanner bruger i dag.</td>
+            </tr>
+            <tr>
+              <td class="col-label">OpenCLIP</td>
+              <td>Open-source genbygning af CLIP, trænet på endnu større datasæt af LAION-fællesskabet. Bedre præstation, samme arkitektur.</td>
+            </tr>
+            <tr>
+              <td class="col-label">SigLIP (Google, 2023)</td>
+              <td>Erstatter softmax-tabsfunktionen med sigmoid. Bedre præcision, særligt ved fine-grained retrieval. SigLIP 2 (2024) er state-of-the-art.</td>
+            </tr>
+            <tr>
+              <td class="col-label">MetaCLIP (Meta, 2023)</td>
+              <td>Metas tilgang med mere kuration af træningsdata. Konkurrencedygtig men ikke spektakulær.</td>
+            </tr>
+            <tr>
+              <td class="col-label">MobileCLIP (Apple, 2024)</td>
+              <td>Specielt designet til Apple Silicon og Neural Engine. Hurtigere og mindre end andre med sammenlignelig præcision.</td>
+            </tr>
+            <tr>
+              <td class="col-label">MobileCLIP 2 (Apple, 2025)</td>
+              <td>Næste generation. S4-varianten matcher SigLIP-SO400M på præcision men halv så stor og langt hurtigere på Apple-hardware.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Hvad gør en model "bedre"?</h3>
+
+      <p>Tre dimensioner. Sjældent er én model bedst på alle tre:</p>
+
+      <ul>
+        <li><strong>Præcision</strong> — hvor godt rangerer modellen rigtige matches over forkerte? Måles typisk på benchmarks som ImageNet zero-shot accuracy.</li>
+        <li><strong>Hastighed</strong> — hvor hurtigt kan modellen producere en embedding? Måles i millisekunder per billede.</li>
+        <li><strong>Størrelse</strong> — hvor mange parametre har modellen? Større modeller er typisk mere præcise men langsommere og fylder mere på disken.</li>
+      </ul>
+
+      <p>For et internt værktøj som VisualScanner, der skal kunne køre på editorernes egne maskiner uden at stå i vejen for FCP, er <em>balance</em> mellem alle tre vigtigere end at vinde på én enkelt parameter.</p>
+
+      <details class="deep-dive">
+        <summary>Dyk dybere — hvad er forskellen på softmax og sigmoid?</summary>
+        <div class="deep-content">
+          <p>Det her er teknisk men interessant. Begge er matematiske funktioner der bruges som <em>tabsfunktion</em> under træning — altså den måde modellen "scores" på når den prøver at lære.</p>
+          <p><strong>Softmax</strong> tvinger modellen til at vælge én rigtig blandt mange. Det betyder: jo flere muligheder modellen ser samtidigt (større batch), jo mere lærer den. Derfor har CLIP brug for kæmpe batch-sizes (32.000+) og enorme GPU-clusters til træning.</p>
+          <p><strong>Sigmoid</strong> behandler hver billede–tekst-par individuelt. "Er disse to et match? Ja eller nej." Det betyder modellen ikke har brug for batch-konteksten på samme måde, og kan trænes effektivt på mindre hardware. SigLIP udnytter det.</p>
+          <p>I praksis: SigLIP kan trænes mere effektivt og opnår ofte bedre resultater per kompute-krone. For dig som bruger gør det ingen forskel — du downloader bare den færdige model. Men det er grunden til at SigLIP er blevet så populær blandt forskere.</p>
+        </div>
+      </details>
+
+      <!-- ═══════════════ 07 MOBILECLIP 2 ═══════════════ -->
+      <div class="divider">
+        <span class="divider-num">07</span>
+        <span class="divider-label">Den valgte model</span>
+        <span class="divider-line"></span>
+      </div>
+
+      <h2 id="mobileclip">Apple MobileCLIP 2</h2>
+
+      <p class="lead">Det er den vi har valgt til VisualScanner. Her er hvorfor.</p>
+
+      <h3>Hvad den er</h3>
+
+      <p>MobileCLIP er Apples egen familie af image-text modeller, designet specifikt til at køre effektivt på Apple Silicon og Neural Engine. <strong>MobileCLIP 2</strong> er anden generation, udgivet under TMLR i august 2025 og open-sourcet samme måned.</p>
+
+      <p>Familien består af flere størrelser, hver med sin balance mellem hastighed og præcision:</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Variant</th><th>Karakteristik</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="col-label col-mono">S0</td>
+              <td>Mindst og hurtigst. Match for OpenAI's gamle ViT-B/16 i præcision, men 4.8× hurtigere og 2.8× mindre. Ideelt til real-time mobile-brug.</td>
+            </tr>
+            <tr>
+              <td class="col-label col-mono">S2</td>
+              <td>Sweet spot for de fleste brug. Bedre end SigLIP ViT-B/16 på præcision, 2.3× hurtigere, 2.1× mindre. Kan stadig køre i baggrunden uden at belaste maskinen.</td>
+            </tr>
+            <tr>
+              <td class="col-label col-mono">S3</td>
+              <td>Mellem S2 og S4. Sjældent det optimale valg.</td>
+            </tr>
+            <tr>
+              <td class="col-label col-mono">S4 ← vores valg</td>
+              <td>Tæt på state-of-the-art. Matcher SigLIP-SO400M på ImageNet med halv størrelse, slår DFN ViT-L/14 ved 2.5× lavere latency. Tungere men giver bedst søgepræcision.</td>
+            </tr>
+            <tr>
+              <td class="col-label col-mono">B / L-14</td>
+              <td>Standard ViT-arkitekturer trænet med Apples metode. Mere kompatible med eksisterende toolchains, men ikke optimeret som S-serien.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Hvorfor MobileCLIP er rigtig for os</h3>
+
+      <div class="callout callout-ok">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        <div class="callout-body">
+          <span class="callout-label">Fordel · Hardware-match</span>
+          <p>Vores 15 Mac mini M4 Pro har Neural Engine. Apple har designet MobileCLIP arkitektonisk så operationerne mapper rent til Neural Engine. SigLIP og almindelig CLIP falder ofte tilbage til GPU/CPU på samme operationer. Resultat: hurtigere scanning, lavere strømforbrug, og maskinerne kan stadig bruges til redigering imens.</p>
+        </div>
+      </div>
+
+      <div class="callout callout-ok">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        <div class="callout-body">
+          <span class="callout-label">Fordel · Færre led i konverteringen</span>
+          <p>Apple udgiver modellen <em>allerede</em> som <code>.mlpackage</code> — klar til at åbne i Xcode. Med SigLIP 2 skulle vi downloade PyTorch-vægte, installere coremltools, skrive et konverterings-script, debugge tensor-shapes. Den slags eftermiddags-arbejde der ender i rabbit holes. Apples model er drop-in.</p>
+        </div>
+      </div>
+
+      <div class="callout callout-ok">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        <div class="callout-body">
+          <span class="callout-label">Fordel · Apple bruger den selv</span>
+          <p>MobileCLIP driver dele af Photos-appens søgning på iPhone. Det betyder Apple har en levende interesse i at vedligeholde og forbedre den. Vi så v1 → v2 på 14 måneder. Det er ikke et forskningsprojekt der bliver forladt.</p>
+        </div>
+      </div>
+
+      <div class="callout callout-warn">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <div class="callout-body">
+          <span class="callout-label">Modargument · Licens</span>
+          <p>OpenAI CLIP er MIT-licens (helt fri). MobileCLIP er Apples forskningslicens — fin til internt værktøj som hos os, men du bør læse teksten før den havner i noget der sælges eksternt. Det skal vi aldrig — men det er værd at have på det rene.</p>
+        </div>
+      </div>
+
+      <div class="callout callout-warn">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <div class="callout-body">
+          <span class="callout-label">Modargument · Mindre community</span>
+          <p>SigLIP har flere tutorials, GitHub-eksempler og Stack Overflow-svar. Hvis du støder på et problem, finder du flere andre der har løst samme problem med SigLIP. Med MobileCLIP er du oftere alene med Apples officielle dokumentation.</p>
+        </div>
+      </div>
+
+      <div class="callout callout-neutral">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        <div class="callout-body">
+          <span class="callout-label">Udforsk videre</span>
+          Apple udgiver flere AI-modeller på samme platform. Tjek <a href="https://huggingface.co/apple" target="_blank">huggingface.co/apple</a> — der finder du også <strong>FastVLM</strong> (vision-language model), <strong>DepthPro</strong> (dybdeestimering fra ét billede), og <strong>OpenELM</strong> (sprogmodel). Alle designet til Apple Silicon.
+        </div>
+      </div>
+
+      <!-- ═══════════════ 08 HUGGING FACE ═══════════════ -->
+      <div class="divider">
+        <span class="divider-num">08</span>
+        <span class="divider-label">Platformen</span>
+        <span class="divider-line"></span>
+      </div>
+
+      <h2 id="huggingface">Hugging Face</h2>
+
+      <p class="lead">Hugging Face er "GitHub for AI-modeller". En hjemmeside hvor folk og firmaer lægger trænede modeller op så andre kan hente og bruge dem.</p>
+
+      <p>Når et firma som Apple, Google eller Meta træner en AI-model, ender de med en stor fil — typisk flere hundrede MB til flere GB — der indeholder alle de tal modellen har lært. Spørgsmålet er hvor de skal lægge den fil så andre kan finde og downloade den. Det er det Hugging Face løste.</p>
+
+      <h4>På siden kan man:</h4>
+      <ul>
+        <li>Downloade modeller (gratis, oftest uden konto)</li>
+        <li>Læse hvad modellen kan, hvor stor den er, og hvilken licens den har</li>
+        <li>Se hvor mange der har downloadet den (god indikator for om den er populær og vedligeholdt)</li>
+        <li>Læse "model cards" — datablade for AI-modeller</li>
+        <li>Diskutere fejl og brug i kommentar-sektioner</li>
+      </ul>
+
+      <h3>Hvorfor det er blevet standarden</h3>
+
+      <p>Før Hugging Face var AI-modeller spredt ud over forskeres egne hjemmesider, Google Drive-links, og GitHub-repositories med dårlig dokumentation. Hugging Face samlede det hele ét sted med en fælles måde at beskrive modeller på. I dag er der over en million modeller på siden. Når Apple udgiver MobileCLIP, OpenAI udgiver Whisper, eller Meta udgiver Llama, ender modellen næsten altid på Hugging Face.</p>
+
+      <h3>Forretningsmodellen</h3>
+
+      <p>De fleste downloads er gratis. Hugging Face tjener på betalte tjenester for virksomheder — privat hosting, hurtigere servere, support. Lidt samme model som GitHub: gratis for offentlige projekter, betalt for virksomheders private brug.</p>
+
+      <div class="callout callout-neutral">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        <div class="callout-body">
+          <span class="callout-label">Udforsk videre</span>
+          Når du lander på en Hugging Face-side, så kig på fire ting: <strong>antal downloads</strong> (popularitet), <strong>licens</strong> (må du bruge den?), <strong>model card</strong> (hvad gør den?), og <strong>files-fanen</strong> (hvad er der i pakken?). Det fortæller dig 90% af hvad du behøver. Prøv selv: gå til <a href="https://huggingface.co/apple/coreml-mobileclip" target="_blank">huggingface.co/apple/coreml-mobileclip</a>.
+        </div>
+      </div>
+
+
+      <!-- ═══════════════ 09 BESLUTNING ═══════════════ -->
+      <div class="divider">
+        <span class="divider-num">09</span>
+        <span class="divider-label">Vores beslutning</span>
+        <span class="divider-line"></span>
+      </div>
+
+      <h2 id="beslutning">Hvad vi valgte — og hvorfor</h2>
+
+      <p class="lead">Tre konkrete valg. Hvert med en klar begrundelse, så vi om seks måneder kan huske hvorfor vi gjorde som vi gjorde.</p>
+
+      <div class="decision-list">
+        <div class="decision-row">
+          <div class="decision-key">Model</div>
+          <div class="decision-val">
+            <strong>MobileCLIP 2 — variant S4</strong>
+            Den tungeste i serien, men matcher state-of-the-art på præcision. Vores hardware (M4 Pro + Neural Engine) håndterer den fint, og søgekvalitet betyder mere for editorer end scanning-hastighed.
+          </div>
+        </div>
+        <div class="decision-row">
+          <div class="decision-key">Strategi</div>
+          <div class="decision-val">
+            <strong>Hård udskiftning</strong>
+            Vi versionerer ikke. Den gamle CLIP fjernes, eksisterende embeddings betragtes som forældede og skal genscannes. Genscanning af biblioteket kan køre over en weekend. Det giver renere kode og færre fejlkilder end at vedligeholde to modeller samtidig.
+          </div>
+        </div>
+        <div class="decision-row">
+          <div class="decision-key">Dimension</div>
+          <div class="decision-val">
+            <strong>Fri til at vælge optimal</strong>
+            Vi har ingen eksisterende kode der afhænger af den specifikke dimension (512). MobileCLIP 2-S4's faktiske output-dimension afgør formatet — sandsynligvis 768 eller 1024. JSON-metadataen får et nyt felt <code>embedding_dim</code> så fremtidige læsere ved hvad de får.
+          </div>
+        </div>
+        <div class="decision-row">
+          <div class="decision-key">Implementering</div>
+          <div class="decision-val">
+            <strong>Claude Code i fase-baseret prompt</strong>
+            Med stop-punkter mellem hver fase: undersøg eksisterende kode → hent og inspicér modellen → implementér udskiftning → verificér → opdatér dokumentation. Vigtigste fejlkilde er pre-processing (resize, normalisering), som skal være præcist matchet til den nye model.
+          </div>
+        </div>
+      </div>
+
+      <div class="callout callout-info">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+        <div class="callout-body">
+          <span class="callout-label">Vigtig konsekvens</span>
+          <p>Når den nye model er installeret, virker eksisterende søgninger ikke længere mod ikke-genscannet materiale. Vi skal planlægge en genscanning af hele biblioteket i en periode hvor det ikke generer produktionen. En weekend bør være rigeligt.</p>
+        </div>
+      </div>
+
+      <!-- ═══════════════ 10 PRAKSIS-INTRO ═══════════════ -->
+      <div class="divider">
+        <span class="divider-num">10</span>
+        <span class="divider-label">Fra teori til praksis</span>
+        <span class="divider-line"></span>
+      </div>
+
+      <h2 id="praksis-intro">MobileCLIP i virkeligheden</h2>
+
+      <p class="lead">Ovenstående var teorien. Nu kommer hvad vi lærte da modellen mødte 1.194 rigtige frames fra "Bali på menuen" — første test af MobileCLIP 2-S4 på produktionsmateriale.</p>
+
+      <p>Testen var lille og afgrænset: 34 klip, natur-B-roll, ingen interviews eller dramaproduktion. Men det gav os den første ærlige data om hvordan modellen opfører sig på <em>vores</em> materiale, og det fortæller meget om hvordan VisualScanner skal bygges videre.</p>
+
+      <div class="callout callout-neutral">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        <div class="callout-body">
+          <span class="callout-label">Struktur</span>
+          Sektionerne herunder starter med fem findings som TL;DR, og udfolder så hver af dem med konkrete eksempler, scores, og praktiske konsekvenser. Hvis du er travl, læs kun "Fem findings" — resten er detaljerne.
+        </div>
+      </div>
+
+      <!-- ═══════════════ 11 PRAKSIS-FINDINGS ═══════════════ -->
+      <div class="divider">
+        <span class="divider-num">11</span>
+        <span class="divider-label">Sammenfatning</span>
+        <span class="divider-line"></span>
+      </div>
+
+      <h2 id="praksis-findings">Fem findings</h2>
+
+      <p class="lead">Alt i de følgende sektioner destilleret. Læs kun dette hvis du ikke har tid til resten — men vid at hvert punkt er uddybet nedenfor.</p>
+
+      <div class="callout callout-info">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+        <div class="callout-body">
+          <span class="callout-label">TL;DR — fem findings</span>
+          <ol>
+            <li><strong>Modellen matcher visuelt indhold, ikke tematisk.</strong> Tænk "hvad ser jeg i frame'et" — ikke "hvad handler scenen om".</li>
+            <li><strong>Enkeltord virker</strong> og er ofte nok. Sætninger hæver scoren 0,01–0,03 men rammer typisk samme klip.</li>
+            <li><strong>Scores 0,30+ er typisk relevante.</strong> 0,20–0,30 er "måske". Under 0,20 er gæt.</li>
+            <li><strong>Hvis du gætter forkert på indholdet</strong>, får du skrald tilbage. Sample altid et par frames først.</li>
+            <li><strong>Stærk på objekter, miljøer, komposition og lys.</strong> Svag på handlinger, følelser og abstrakte begreber.</li>
+          </ol>
+        </div>
+      </div>
+
+      <blockquote>
+        Modellen ser hvad kameraet fangede. Ikke hvad scenen betyder.
+        <cite>Den vigtigste pointe</cite>
+      </blockquote>
+
+      <!-- ═══════════════ 12 VISUELT VS TEMATISK ═══════════════ -->
+      <div class="divider">
+        <span class="divider-num">12</span>
+        <span class="divider-label">Finding #1</span>
+        <span class="divider-line"></span>
+      </div>
+
+      <h2 id="praksis-visuelt">Visuelt indhold — ikke tematisk</h2>
+
+      <p>Det første eksperiment gik galt. Titlen "Bali på menuen" bragte os til at søge efter mad: <code>a close-up of a plate of food</code>, <code>grilled meat on a plate</code>, <code>hands preparing ingredients</code>. Alle gav irrelevante matches.</p>
+
+      <p>Et langt øjeblik tænkte jeg "modellen virker ikke". Og så kiggede jeg faktisk på klippene.</p>
+
+      <p>Klippene indeholdt <em>intet</em> af det vi søgte på. Det var natur-B-roll: vandfald, jungle-kroner, en edderkop tæt på, et frugtmarked. Ingen gryder, ingen tallerkener, ingen hænder der skærer. Vi havde gættet på et indhold baseret på program-titlen — og gættede forkert.</p>
+
+      <div class="callout callout-warn">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <div class="callout-body">
+          <span class="callout-label">Modellen gør altid noget</span>
+          <p>En cosine-søgning vil <em>altid</em> returnere en rangering. Også når intet i datasættet matcher. Den finder bare den vektor der ligger nærmest din query — selvom afstanden er stor. Det er derfor lav score er så vigtig: den er signalet på "jeg fandt noget, men det er ikke godt".</p>
+        </div>
+      </div>
+
+      <p>Da jeg rettede queries til at beskrive <em>hvad der faktisk var i klippene</em>, faldt tingene på plads:</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Query</th><th>Top-1 klip</th><th>Score &amp; match</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="col-mono"><code>a waterfall in a tropical jungle</code></td>
+              <td class="col-mono">KAM10073</td>
+              <td class="col-hit">0,317 ✓ vandfald</td>
+            </tr>
+            <tr>
+              <td class="col-mono"><code>a spider on its web</code></td>
+              <td class="col-mono">KAM10066</td>
+              <td class="col-hit">0,320 ✓ edderkop</td>
+            </tr>
+            <tr>
+              <td class="col-mono"><code>a market stall with baskets of fruit</code></td>
+              <td class="col-mono">KAM10090</td>
+              <td class="col-hit">0,347 ✓ frugtmarked</td>
+            </tr>
+            <tr>
+              <td class="col-mono"><code>dense green jungle canopy</code></td>
+              <td class="col-mono">KAM10070</td>
+              <td class="col-hit">✓ jungle op mod himlen</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <blockquote>
+        Når resultater ser skæve ud — spørg først <em>"er indholdet overhovedet i klippene?"</em>, ikke <em>"virker modellen?"</em>
+        <cite>Lektion</cite>
+      </blockquote>
+
+      <div class="callout callout-warn">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <div class="callout-body">
+          <span class="callout-label">Kontrast: de dårlige eksempler</span>
+          <p>Til sammenligning returnerede queries som <code>grilled meat on a plate</code>, <code>hands preparing ingredients</code> og <code>a close-up of a plate of food</code> også noget — men det var åbenlyst mismatch fordi indholdet ikke findes i klippene. Modellen rangerede stadig, men scorede lavt og ramte tilfældigt.</p>
+        </div>
+      </div>
+
+      <p>Det lyder banalt. Det er det ikke. For når jeg som editor bruger appen i fremtiden, har jeg ofte en <em>ide</em> om hvad der ligger i rushes — men ikke altid ret. Programmets tema, historien vi fortæller, det mentale billede jeg har — intet af det er i embeddingen. Modellen ser kun hvad kameraet fangede.</p>
+
+      <div class="callout callout-neutral">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        <div class="callout-body">
+          <span class="callout-label">Praktisk konsekvens</span>
+          Før du starter en målrettet søgning på et ukendt datasæt, så kør et par <em>eksplorative queries</em> først. Ting som <code>outdoor scene</code>, <code>person</code>, <code>close-up</code>. De fortæller dig hvad der faktisk ligger i rushes. Derefter kan du stille de skarpe spørgsmål.
+        </div>
+      </div>
+
+      <!-- ═══════════════ 13 SCORE-KALIBRERING ═══════════════ -->
+      <div class="divider">
+        <span class="divider-num">13</span>
+        <span class="divider-label">Finding #3</span>
+        <span class="divider-line"></span>
+      </div>
+
+      <h2 id="praksis-scores">Score-kalibrering</h2>
+
+      <p>Cosine similarity giver altid et tal mellem -1 og 1. Men i praksis, på CLIP-lignende modeller, bevæger scores sig i et smallere bånd — typisk 0,10 til 0,40 for CLIP-familien. Her er den kalibrering jeg udledte fra Bali-datasættet:</p>
+
+      <div class="score-ladder">
+        <div class="score-row strong">
+          <div class="score-range">0,32 +</div>
+          <div class="score-desc">
+            <strong>Stærk match</strong>
+            Top-1-klippet er næsten altid korrekt. Hvis scoren er her, så stoler på resultatet. Tag top-5 og vælg det bedste shot.
+          </div>
+        </div>
+        <div class="score-row ok">
+          <div class="score-range">0,28 – 0,32</div>
+          <div class="score-desc">
+            <strong>Brugbar match</strong>
+            Relevant, men sjældent det bedst mulige. Top-1 er ofte korrekt kategori men ikke optimalt shot. Scan top-10.
+          </div>
+        </div>
+        <div class="score-row weak">
+          <div class="score-range">0,20 – 0,28</div>
+          <div class="score-desc">
+            <strong>Delvist relevant</strong>
+            Samme mood, farver, kontekst — men ofte ikke motivet du søgte. Forbedr din query, eller accepter at du skimmer manuelt.
+          </div>
+        </div>
+        <div class="score-row noise">
+          <div class="score-range">&lt; 0,20</div>
+          <div class="score-desc">
+            <strong>Støj</strong>
+            Modellen rangerer noget fordi du bad den — men intet er tæt på. Enten findes indholdet ikke i datasættet (se finding #1), eller din query er for abstrakt.
+          </div>
+        </div>
+      </div>
+
+      <div class="callout callout-info">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+        <div class="callout-body">
+          <span class="callout-label">Vigtigt forbehold</span>
+          <p>Kalibreringen er <strong>dataset-afhængig</strong>. Et datasæt med ren natur giver andre typiske scores end et med mange mennesker i interiør. De <em>relative afstande</em> er dog konsistente: top-5 ligger altid tæt, støj ligger altid langt væk. Brug tallene som vejledning, ikke som absolut sandhed.</p>
+        </div>
+      </div>
+
+      <details class="deep-dive">
+        <summary>Dyk dybere — hvorfor ikke scores tæt på 1,0?</summary>
+        <div class="deep-content">
+          <p>I ren matematik giver to identiske L2-normaliserede vektorer cosine similarity = 1,0. Men CLIP-modeller placerer aldrig billeder og tekst på <em>samme</em> punkt — kun i samme <em>rum</em>. Der er altid en "modality gap": billed-vektorer klumper sig i ét område, tekst-vektorer i et andet. Selv perfekte matches ligger typisk ved 0,30–0,40.</p>
+          <p>Det betyder også at <strong>scores ikke kan sammenlignes direkte på tværs af modeller</strong>. MobileCLIP 2-S4 kan score 0,32 hvor SigLIP-SO400M scorer 0,28 for samme match — det er ikke fordi den ene er bedre. Det er fordi deres interne "temperatur" er forskellig. Sammenlign kun scores inden for samme model.</p>
+        </div>
+      </details>
+
+
+      <!-- ═══════════════ 14 ENKELTORD VS SÆTNINGER ═══════════════ -->
+      <div class="divider">
+        <span class="divider-num">14</span>
+        <span class="divider-label">Finding #2</span>
+        <span class="divider-line"></span>
+      </div>
+
+      <h2 id="praksis-queries">Enkeltord vs. sætninger</h2>
+
+      <p>Det er fristende at skrive lange beskrivende queries, som om modellen var Google. Men CLIP-familien blev trænet på korte billedtekster — så korte queries er ofte mindst lige så gode. Jeg testede fire varianter per objekt på samme 1.194 frames.</p>
+
+      <h4>Edderkop — alle varianter ramte samme klip (KAM10066)</h4>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Query</th><th>Top-1 score</th><th>Top-1 klip</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="col-mono"><code>spider</code></td><td class="col-mono">0,307</td><td class="col-mono col-hit">KAM10066 ✓</td></tr>
+            <tr><td class="col-mono"><code>a spider</code></td><td class="col-mono col-best">0,318</td><td class="col-mono col-hit">KAM10066 ✓</td></tr>
+            <tr><td class="col-mono"><code>a photo of a spider</code></td><td class="col-mono">0,314</td><td class="col-mono col-hit">KAM10066 ✓</td></tr>
+            <tr><td class="col-mono"><code>a spider on its web</code></td><td class="col-mono col-best">0,320</td><td class="col-mono col-hit">KAM10066 ✓</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h4>Marked — varianter ramte forskellige klip</h4>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Query</th><th>Top-1 score</th><th>Top-1 klip</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="col-mono"><code>market</code></td><td class="col-mono">0,321</td><td class="col-mono col-hit">KAM10090 ✓</td></tr>
+            <tr><td class="col-mono"><code>a market</code></td><td class="col-mono">0,321</td><td class="col-mono col-miss">KAM10088 (andet klip)</td></tr>
+            <tr><td class="col-mono"><code>fruit market</code></td><td class="col-mono">0,328</td><td class="col-mono col-hit">KAM10090 ✓</td></tr>
+            <tr><td class="col-mono"><code>a market stall with baskets of fruit</code></td><td class="col-mono col-best">0,347</td><td class="col-mono col-hit">KAM10090 ✓</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Hvad det betyder</h3>
+
+      <ul>
+        <li><strong>Enkeltord virker fint</strong> for tydelige objekter. Du rammer typisk samme klip med <code>spider</code> som med <code>a spider on its web</code>.</li>
+        <li><strong>Artiklen "a" giver +0,01</strong> i score men flytter sjældent rangeringen. Det er kosmetisk.</li>
+        <li><strong>Lange beskrivende sætninger <em>bøjer</em> resultatet.</strong> "A market stall with baskets of fruit" prioriterer <em>marked-med-frugtkurve</em> frem for bare marked. Det kan være nyttigt — eller overspecificering.</li>
+        <li><strong>"a photo of a X" er ikke din ven.</strong> Det klassiske OpenAI CLIP prompt template-trick hjælper ikke konsistent med MobileCLIP 2. Spring det over.</li>
+      </ul>
+
+      <blockquote>
+        Brug enkeltord for overblik. Brug kontekst kun når du vil tvinge en bestemt kuratur frem — ikke bare for scores.
+        <cite>Praktisk regel</cite>
+      </blockquote>
+
+      <!-- ═══════════════ 15 STYRKER OG SVAGHEDER ═══════════════ -->
+      <div class="divider">
+        <span class="divider-num">15</span>
+        <span class="divider-label">Finding #5</span>
+        <span class="divider-line"></span>
+      </div>
+
+      <h2 id="praksis-styrker">Hvor modellen er stærk — og hvor den er svag</h2>
+
+      <p>Efter ~50 queries kom der et tydeligt mønster frem. Modellen er næsten altid god til det samme og næsten altid dårlig til det samme. Det er værd at kende, så du ved hvad du kan bede om og hvad der er spild.</p>
+
+      <h3>Hvad modellen er god til</h3>
+
+      <div class="callout callout-ok">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        <div class="callout-body">
+          <span class="callout-label">Stærke kategorier</span>
+          <p>Testet empirisk på Bali-datasættet. Virker som regel med scores over 0,30 hvis indholdet findes i datasættet:</p>
+          <ul>
+            <li><strong>Konkrete objekter og dyr</strong> — <code>spider</code>, <code>palm tree</code>, <code>basket of fruit</code>, <code>car</code></li>
+            <li><strong>Miljøer og landskaber</strong> — <code>jungle</code>, <code>waterfall</code>, <code>market</code>, <code>beach</code>, <code>rice field</code></li>
+            <li><strong>Kompositions-typer</strong> — <code>close-up</code>, <code>wide shot</code>, <code>establishing shot</code>, <code>overhead shot</code></li>
+            <li><strong>Farver og lys</strong> — <code>golden hour</code>, <code>blue tones</code>, <code>high contrast</code>, <code>low light</code></li>
+            <li><strong>Specifikke frugter og mad</strong> — modellen genkender dragefrugt, rambutan, osv. Imponerende detail-niveau.</li>
+          </ul>
+        </div>
+      </div>
+
+      <h3>Hvor modellen er dårligere</h3>
+
+      <div class="callout callout-warn">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <div class="callout-body">
+          <span class="callout-label">Svage kategorier</span>
+          <p>Rangerer noget men pålideligheden er lav. Undgå disse eller brug dem med forsigtighed:</p>
+          <ul>
+            <li><strong>Handlinger uden tydelige visuelle markører</strong> — <code>waiting</code>, <code>listening</code>, <code>contemplating</code></li>
+            <li><strong>Følelser</strong> — <code>someone happy</code>, <code>sad person</code>. Den fanger overdrevne udtryk, ikke subtile.</li>
+            <li><strong>Abstrakte begreber</strong> — <code>tension</code>, <code>warmth</code>, <code>authenticity</code>. Ord der kræver kontekst eller fortolkning.</li>
+            <li><strong>Tekst i billeder</strong> — den ser skilte som <em>grafiske elementer</em>, læser dem ikke.</li>
+            <li><strong>Fingerede detaljer</strong> — <code>a red Toyota from 1985</code>. Racen/model/år er for finkornet. Den vil give dig en rød bil, men ikke nødvendigvis en Toyota, og næsten sikkert ikke årgangen.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="callout callout-neutral">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        <div class="callout-body">
+          <span class="callout-label">I praksis</span>
+          Hvis din første query fejler, så spørg: <em>beder jeg modellen om noget den kan se, eller noget den skal fortolke?</em> Omform til noget visuelt. I stedet for <code>someone feeling stressed</code> → prøv <code>hands clenched</code>, <code>furrowed brow</code>, <code>tense posture</code>. Du bliver bedre til at se som kameraet ser.
+        </div>
+      </div>
+
+      <!-- ═══════════════ 16 ARBEJDSGANG ═══════════════ -->
+      <div class="divider">
+        <span class="divider-num">16</span>
+        <span class="divider-label">Ny praksis</span>
+        <span class="divider-line"></span>
+      </div>
+
+      <h2 id="praksis-workflow">Den arbejdsgang der virker</h2>
+
+      <p>Kombineret giver findings ovenfor en konkret tre-trins-proces for at søge i et nyt datasæt. Det er ikke akademi — det er det jeg vil bygge ind i VisualScanner-UI'et på sigt, så editors falder ned i det af sig selv.</p>
+
+      <div class="diagram">
+        <svg viewBox="0 0 700 220" xmlns="http://www.w3.org/2000/svg">
+          <!-- Step 1 -->
+          <rect x="20" y="60" width="180" height="100" rx="6" fill="#fafafa" stroke="#0a0a0a" stroke-width="1.5"/>
+          <text x="110" y="85" font-family="Geist Mono, monospace" font-size="10" fill="#0a0a0a" text-anchor="middle" letter-spacing="1" font-weight="500">TRIN 01</text>
+          <text x="110" y="110" font-family="Geist, sans-serif" font-size="14" fill="#0a0a0a" text-anchor="middle" font-weight="500">Eksplorer</text>
+          <text x="110" y="128" font-family="Geist, sans-serif" font-size="11" fill="#525252" text-anchor="middle">Hvad er der</text>
+          <text x="110" y="144" font-family="Geist, sans-serif" font-size="11" fill="#525252" text-anchor="middle">overhovedet?</text>
+
+          <line x1="208" y1="110" x2="248" y2="110" stroke="#525252" stroke-width="1.5"/>
+          <polygon points="248,110 240,106 240,114" fill="#525252"/>
+
+          <!-- Step 2 -->
+          <rect x="260" y="60" width="180" height="100" rx="6" fill="#fafafa" stroke="#0a0a0a" stroke-width="1.5"/>
+          <text x="350" y="85" font-family="Geist Mono, monospace" font-size="10" fill="#0a0a0a" text-anchor="middle" letter-spacing="1" font-weight="500">TRIN 02</text>
+          <text x="350" y="110" font-family="Geist, sans-serif" font-size="14" fill="#0a0a0a" text-anchor="middle" font-weight="500">Målret</text>
+          <text x="350" y="128" font-family="Geist, sans-serif" font-size="11" fill="#525252" text-anchor="middle">Præcise queries</text>
+          <text x="350" y="144" font-family="Geist, sans-serif" font-size="11" fill="#525252" text-anchor="middle">på kendt indhold</text>
+
+          <line x1="448" y1="110" x2="488" y2="110" stroke="#525252" stroke-width="1.5"/>
+          <polygon points="488,110 480,106 480,114" fill="#525252"/>
+
+          <!-- Step 3 -->
+          <rect x="500" y="60" width="180" height="100" rx="6" fill="#fafafa" stroke="#0a0a0a" stroke-width="1.5"/>
+          <text x="590" y="85" font-family="Geist Mono, monospace" font-size="10" fill="#0a0a0a" text-anchor="middle" letter-spacing="1" font-weight="500">TRIN 03</text>
+          <text x="590" y="110" font-family="Geist, sans-serif" font-size="14" fill="#0a0a0a" text-anchor="middle" font-weight="500">Eksperimentér</text>
+          <text x="590" y="128" font-family="Geist, sans-serif" font-size="11" fill="#525252" text-anchor="middle">Varianter når</text>
+          <text x="590" y="144" font-family="Geist, sans-serif" font-size="11" fill="#525252" text-anchor="middle">det tæller</text>
+        </svg>
+        <div class="diagram-caption"><strong>Fig. 4.</strong> Tre-trins søgeflow for et nyt datasæt</div>
+      </div>
+
+      <h3>Trin 01 — eksplorer først</h3>
+
+      <p>Når du ikke ved hvad der er i klippene (og det ved du ofte ikke), så start bredt. Et håndfuld brede queries tegner et kort over indholdet.</p>
+
+      <pre><code># Hvad slags scener er der?
+query: "outdoor scene"      k=10
+query: "indoor scene"       k=10
+query: "person"             k=10
+query: "close-up"           k=10</code></pre>
+
+      <p>Kig på top-5 i hver. Nu ved du om datasættet er natur, interview, maddage, action — eller en blanding.</p>
+
+      <h3>Trin 02 — målret</h3>
+
+      <p>Med det billede i hovedet, stil de skarpe spørgsmål. Enkeltord først. Læs finding #2 igen: du behøver ikke skrive sætninger.</p>
+
+      <pre><code># Nu ved jeg det er natur-B-roll
+query: "waterfall"          k=20
+query: "market with vendors" k=20
+query: "spider"             k=20</code></pre>
+
+      <h3>Trin 03 — eksperimentér når det tæller</h3>
+
+      <p>Hvis et specifikt shot skal findes — til en trailer, en teaser, et bestemt øjeblik — så kør flere varianter og sammenlign top-5. Den lange query kan ændre hvilket klip der vinder top-1. Det er <em>kuratur</em>, ikke bedre søgning.</p>
+
+      <pre><code># Jeg leder efter et særligt shot af edderkop
+query: "spider"                                k=10
+query: "large spider on a web in jungle"       k=10
+# Sammenlign top-5 og vælg det der bedst matcher
+# det visuelle jeg har i hovedet</code></pre>
+
+      <div class="decision-list">
+        <div class="decision-row">
+          <div class="decision-key">Intern praksis</div>
+          <div class="decision-val">
+            <strong>Tre-trins-søgning er default</strong>
+            For alle VisualScanner-søgninger på ukendt materiale: start bredt, indsnævr, varier. Skal bygges ind i VisualScanner-UI'et som en default "wizard"-tilstand for nye brugere — og som den hurtige workflow for erfarne.
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════ 17 FREMTIDEN ═══════════════ -->
+      <div class="divider">
+        <span class="divider-num">17</span>
+        <span class="divider-label">Den næste sten</span>
+        <span class="divider-line"></span>
+      </div>
+
+      <h2 id="fremtiden">Vidensbank til Dashboard</h2>
+
+      <p class="lead">Den her HTML er prototypen. Det egentlige mål er at samme princip bygges ind i Dashboard-appen, så al teknisk viden om vores værktøjer og workflows kan tilgås ét sted.</p>
+
+      <p>Vi har talt om to fundamentalt forskellige tilgange — og de udelukker ikke hinanden:</p>
+
+      <h3>A. Notesbank — strukturerede artikler</h3>
+      <p>Browse-baseret. Du finder ting ved at navigere kategorier eller søge på titler. "Hvad er MobileCLIP?", "Hvordan virker NFS-mounten?", "Hvilken codec bruger vi til proxy?". Det er Notion, Obsidian, en wiki — bygget i Dashboard.</p>
+
+      <h3>B. Søgbar samtale-arkiv — semantisk søgning</h3>
+      <p>Du smider rå samtaler, beslutninger og fragmenter ind, og finder ting ved at spørge i naturligt sprog: "hvad var det vi besluttede om CLIP-modellen?". Det er semantisk søgning oven på dine egne data — meget tæt på det VisualScanner gør for video, bare for tekst.</p>
+
+      <p>Det interessante: <strong>arkitekturen i B er den samme som i VisualScanner</strong>. Du genbruger embedding-konceptet, bare med en text encoder i stedet for en image encoder. Hvis du bygger det rigtigt fra start, har du faktisk to versioner af samme system.</p>
+
+      <div class="callout callout-neutral">
+        <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        <div class="callout-body">
+          <span class="callout-label">Udforsk videre</span>
+          Til tekst-embeddings er <strong>OpenAI's text-embedding-3-small</strong> en god default (lille, hurtig, ~$0.02 per 1M tokens), eller <strong>Apples sentence-embedding-modeller</strong> til lokal-only setup. Begge producerer vektorer du kan sammenligne med cosine similarity præcis som vi gør med billeder. Hele knowhow'en fra VisualScanner overføres direkte.
+        </div>
+      </div>
+
+
+      <!-- ═══════════════ 18 ORDBOG ═══════════════ -->
+      <div class="divider">
+        <span class="divider-num">18</span>
+        <span class="divider-label">Reference</span>
+        <span class="divider-line"></span>
+      </div>
+
+      <h2 id="ordbog">Ordbog</h2>
+
+      <p class="lead">Termer fra denne vidensbank. Klik på links i teksten ovenfor for at hoppe direkte hertil.</p>
+
+      <div class="glossary-grid">
+
+        <div class="glossary-item" id="embedding">
+          <div class="glossary-term">Embedding<span class="pronounce">/em-bed-ing/</span></div>
+          <div class="glossary-def">En liste af tal med fast længde, som repræsenterer indholdet af en input (et billede, en tekst, en lyd) i et matematisk rum hvor lighed kan måles. På dansk nogle gange "indlejring", men næsten ingen siger det. Output fra en encoder-model.</div>
+        </div>
+
+        <div class="glossary-item" id="vektor">
+          <div class="glossary-term">Vektor<span class="pronounce">/vek-tor/</span></div>
+          <div class="glossary-def">En liste af tal med fast længde, som kan tolkes som koordinater for et punkt i et flerdimensionelt rum. En 512-dim vektor er et punkt i et 512-dimensionelt rum. Embeddings er vektorer.</div>
+        </div>
+
+        <div class="glossary-item" id="cosine">
+          <div class="glossary-term">Cosine similarity<span class="pronounce">/koh-sine/</span></div>
+          <div class="glossary-def">Mål for hvor "ens" to vektorer er, baseret på vinklen mellem dem. Resultat mellem -1 (modsat) og 1 (identisk). 0 betyder ikke-relateret. Standard-metoden til at sammenligne embeddings.</div>
+        </div>
+
+        <div class="glossary-item" id="l2">
+          <div class="glossary-term">L2-normaliseret<span class="pronounce">/L-to/</span></div>
+          <div class="glossary-def">Vektoren er skaleret så dens samlede længde er præcis 1. Det betyder kun retningen tæller — ikke "styrken". Gør cosine similarity hurtigere at beregne og fjerner ujævnheder fra inputtets størrelse.</div>
+        </div>
+
+        <div class="glossary-item" id="clip">
+          <div class="glossary-term">CLIP<span class="pronounce">/klip/</span></div>
+          <div class="glossary-def">Contrastive Language-Image Pre-training. OpenAI's oprindelige model fra 2021 der kan oversætte både billeder og tekst til vektorer i samme rum. Hele dette felt bygger videre på den.</div>
+        </div>
+
+        <div class="glossary-item" id="vit">
+          <div class="glossary-term">ViT<span class="pronounce">/V-I-T/</span></div>
+          <div class="glossary-def">Vision Transformer. En type neural netværks-arkitektur til billedforståelse, som overtog rollen fra ældre CNN-arkitekturer omkring 2020. ViT-B/32 betyder "Base-størrelse, patch size 32 pixels".</div>
+        </div>
+
+        <div class="glossary-item" id="encoder">
+          <div class="glossary-term">Encoder<span class="pronounce">/en-koh-der/</span></div>
+          <div class="glossary-def">Den del af en model der oversætter input (billede eller tekst) til en vektor. CLIP har to encoders — én til billeder, én til tekst — som producerer vektorer i samme rum.</div>
+        </div>
+
+        <div class="glossary-item" id="timecode">
+          <div class="glossary-term">Tidskode (timecode)</div>
+          <div class="glossary-def">Standardformat for at angive præcis position i en video, typisk <code>HH:MM:SS:FF</code> hvor FF er frames. Bruges af FCP og andre NLE-systemer til at spole til en specifik position. Lagres sammen med embeddings så søgeresultater kan pege præcist.</div>
+        </div>
+
+        <div class="glossary-item" id="coreml">
+          <div class="glossary-term">CoreML<span class="pronounce">/kor-M-L/</span></div>
+          <div class="glossary-def">Apples framework til at køre maskinlæringsmodeller effektivt på Apple-hardware. Modeller kommer i to formater: <code>.mlpackage</code> (kildefil) og <code>.mlmodelc</code> (kompileret, hurtigere at indlæse).</div>
+        </div>
+
+        <div class="glossary-item" id="neural-engine">
+          <div class="glossary-term">Neural Engine</div>
+          <div class="glossary-def">Specialiseret chip i Apple Silicon (M-serien og A-serien siden A11) designet til at køre AI-modeller hurtigt og strømeffektivt. Forskellig fra GPU og CPU. CoreML kan automatisk vælge hvilken Neural Engine, GPU eller CPU der skal køre en model.</div>
+        </div>
+
+        <div class="glossary-item" id="huggingface-glossary">
+          <div class="glossary-term">Hugging Face</div>
+          <div class="glossary-def">Online platform til deling af AI-modeller, datasæt og kode. De facto standard. Modeller har "model cards" med dokumentation. De fleste downloads er gratis. <a href="https://huggingface.co" target="_blank">huggingface.co</a></div>
+        </div>
+
+        <div class="glossary-item" id="siglip">
+          <div class="glossary-term">SigLIP<span class="pronounce">/sig-lip/</span></div>
+          <div class="glossary-def">Sigmoid Loss for Language-Image Pre-training. Googles videreudvikling af CLIP fra 2023 der bruger en anden tabsfunktion under træning. Resulterer i bedre præcision og mere effektiv træning. SigLIP 2 er nyeste version.</div>
+        </div>
+
+        <div class="glossary-item" id="zero-shot">
+          <div class="glossary-term">Zero-shot</div>
+          <div class="glossary-def">Modellen kan udføre en opgave den aldrig blev specifikt trænet til. CLIP er zero-shot fordi den kan klassificere billeder i hvilken som helst kategori, du beder om — uden at være trænet på den kategori specifikt.</div>
+        </div>
+
+        <div class="glossary-item" id="vlm">
+          <div class="glossary-term">VLM</div>
+          <div class="glossary-def">Vision-Language Model. Modeller der kan både forstå billeder OG generere tekst om dem (i modsætning til CLIP der kun matcher). GPT-4V, Claude Vision, Apple's FastVLM. Tungere end CLIP men kan svare på spørgsmål og beskrive indhold.</div>
+        </div>
+
+        <div class="glossary-item" id="ffmpeg">
+          <div class="glossary-term">ffmpeg</div>
+          <div class="glossary-def">Universel kommandolinje-værktøj til at læse, konvertere og bearbejde video og lyd. VisualScanner bruger det til at pakke videoer ud i enkelt-frames før scanning. Installeres typisk via Homebrew (<code>brew install ffmpeg</code>).</div>
+        </div>
+
+        <div class="glossary-item" id="b-roll">
+          <div class="glossary-term">B-roll</div>
+          <div class="glossary-def">Supplerende optagelser der klippes ind over interviews eller fortælling — natur, objekter, etableringsshots, stemningsbilleder. Modsat A-roll som er den primære fortælle-linje. Test-materialet fra Bali var næsten udelukkende B-roll.</div>
+        </div>
+
+        <div class="glossary-item" id="modality-gap">
+          <div class="glossary-term">Modality gap</div>
+          <div class="glossary-def">Fænomen hvor billed-vektorer og tekst-vektorer i CLIP klumper sig i hver sit område af det fælles rum, selv efter normalisering. Det er grunden til at selv perfekte matches sjældent scorer over 0,40 — der er altid en afstand at slå bro over.</div>
+        </div>
+
+        <div class="glossary-item" id="top-k">
+          <div class="glossary-term">Top-k</div>
+          <div class="glossary-def">De k højst-rangerede resultater fra en søgning. <code>k=10</code> betyder "giv mig de 10 bedste matches". Brug <code>k=5</code> for at se toppen af din søgning, <code>k=20</code> hvis du vil scanne bredere før du vælger.</div>
+        </div>
+
+      </div>
+
+      <!-- ═══════════════ 19 VIDERE LÆSNING ═══════════════ -->
+      <div class="divider">
+        <span class="divider-num">19</span>
+        <span class="divider-label">Reference</span>
+        <span class="divider-line"></span>
+      </div>
+
+      <h2 id="videre">Videre læsning</h2>
+
+      <p class="lead">Hvis du vil dybere ned i emnet, er det her de bedste startsteder. Sorteret efter teknisk niveau.</p>
+
+      <div class="resource-list">
+
+        <a href="https://machinelearning.apple.com/research/mobileclip2" target="_blank" class="resource">
+          <div class="resource-type">Apple Research · Læsbart</div>
+          <div class="resource-title">MobileCLIP 2 — officiel forskningsside</div>
+          <div class="resource-desc">Apples egen præsentation af modellen. Forklarer arkitektur, viser benchmarks, og linker til papiret. Start her.</div>
+        </a>
+
+        <a href="https://machinelearning.apple.com/research/mobileclip" target="_blank" class="resource">
+          <div class="resource-type">Apple Research · Læsbart</div>
+          <div class="resource-title">MobileCLIP v1 — den oprindelige version</div>
+          <div class="resource-desc">Papiret bag den første version. Mere tilgængeligt end v2-papiret, godt til at forstå grundprincipperne.</div>
+        </a>
+
+        <a href="https://huggingface.co/apple" target="_blank" class="resource">
+          <div class="resource-type">Hugging Face · Praktisk</div>
+          <div class="resource-title">Apples model-katalog på Hugging Face</div>
+          <div class="resource-desc">Alle Apples open-source AI-modeller på ét sted. MobileCLIP 2, FastVLM, DepthPro, OpenELM. Færdige CoreML-filer du kan downloade.</div>
+        </a>
+
+        <a href="https://huggingface.co/apple/coreml-mobileclip" target="_blank" class="resource">
+          <div class="resource-type">Hugging Face · Praktisk</div>
+          <div class="resource-title">apple/coreml-mobileclip — den specifikke pakke</div>
+          <div class="resource-desc">Færdig CoreML-version af MobileCLIP, klar til at åbne i Xcode. Det er den fil Claude Code skal hente.</div>
+        </a>
+
+        <a href="https://github.com/apple/ml-mobileclip" target="_blank" class="resource">
+          <div class="resource-type">GitHub · Teknisk</div>
+          <div class="resource-title">apple/ml-mobileclip — kode-implementeringen</div>
+          <div class="resource-desc">Apples officielle kode-base med Python-eksempler, træningsscripts og evalueringer. Reference for præ-processing og brug.</div>
+        </a>
+
+        <a href="https://openai.com/research/clip" target="_blank" class="resource">
+          <div class="resource-type">OpenAI · Historisk</div>
+          <div class="resource-title">Det oprindelige CLIP-papir (OpenAI, 2021)</div>
+          <div class="resource-desc">Den der startede det hele. Stadig den klareste introduktion til contrastive image-text learning. Læs hvis du vil forstå hvor det kommer fra.</div>
+        </a>
+
+        <a href="https://huggingface.co/docs/transformers/en/model_doc/siglip" target="_blank" class="resource">
+          <div class="resource-type">Hugging Face Docs · Teknisk</div>
+          <div class="resource-title">SigLIP-dokumentation</div>
+          <div class="resource-desc">Hvis du vil sammenligne med konkurrencen — Googles SigLIP er den vigtigste alternative model i samme familie.</div>
+        </a>
+
+        <a href="https://developer.apple.com/machine-learning/" target="_blank" class="resource">
+          <div class="resource-type">Apple Developer · Praktisk</div>
+          <div class="resource-title">Apple's ML-overblik for udviklere</div>
+          <div class="resource-desc">Bredere ressource. Documentation, sample code, og links til CoreML, Vision, og Create ML frameworks.</div>
+        </a>
+
+      </div>
+
+      <div class="colophon">
+        <p>Vidensbank · Kapitel 01 · Opdateret april 2026</p>
+        <p>Kombinerer teori om visuelle embeddings med hands-on findings fra første test af MobileCLIP 2-S4.</p>
+        <p>Beregnet til intern brug · Metronome / Nordisk Film TV · Post-production</p>
+      </div>
+
+      <!-- CHAPTER FOOTER -->
+      <div class="chapter-footer">
+        <div class="chapter-footer-nav">
+          <a href="index.html">← Tilbage til forsiden</a>
+        </div>
+        <div class="chapter-footer-meta">
+          KAPITEL 01 · v1.2 · APRIL 2026
+        </div>
+      </div>
+
+    </main>
+
+  </div>
+
+</div>
+
+<script>
+  // Scroll progress
+  const progress = document.getElementById('progress');
+  window.addEventListener('scroll', () => {
+    const h = document.documentElement;
+    const pct = (h.scrollTop / (h.scrollHeight - h.clientHeight)) * 100;
+    progress.style.width = pct + '%';
+  });
+
+  // TOC active state
+  const sections = document.querySelectorAll('main h2[id]');
+  const tocLinks = document.querySelectorAll('.toc a');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const id = entry.target.getAttribute('id');
+        tocLinks.forEach(link => {
+          link.classList.toggle('active', link.getAttribute('href') === '#' + id);
+        });
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+  sections.forEach(s => observer.observe(s));
+</script>
+
+</body>
+</html>
