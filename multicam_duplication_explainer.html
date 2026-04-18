@@ -1,0 +1,1472 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Multicam-duplikation — en teknisk forklaring</title>
+<style>
+  :root {
+    --bg: #0d1115;
+    --bg-elevated: #161b21;
+    --bg-card: #1c2229;
+    --border: #2a323c;
+    --border-bright: #3a4553;
+    --text: #e4e7eb;
+    --text-dim: #8a949e;
+    --text-faint: #5a636d;
+    --cyan: #00d4d4;
+    --cyan-dim: #008e8e;
+    --cyan-soft: rgba(0, 212, 212, 0.12);
+    --warning: #ffb454;
+    --danger: #ff6b6b;
+    --success: #4ade80;
+    --mono: 'SF Mono', Menlo, Monaco, Consolas, monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  .app {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 40px 32px 120px;
+    min-height: 100vh;
+    position: relative;
+  }
+
+  /* Header */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 48px;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .brand-mark {
+    width: 32px;
+    height: 32px;
+    background: var(--cyan);
+    border-radius: 6px;
+    position: relative;
+  }
+
+  .brand-mark::after {
+    content: '';
+    position: absolute;
+    inset: 6px;
+    border: 2px solid var(--bg);
+    border-radius: 2px;
+  }
+
+  .brand-text {
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.8px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+  }
+
+  .progress-label {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-faint);
+    letter-spacing: 1px;
+  }
+
+  /* Slide container */
+  .stage {
+    min-height: 620px;
+    position: relative;
+  }
+
+  .slide {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s ease;
+  }
+
+  .slide.active {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .slide-number {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--cyan-dim);
+    letter-spacing: 2px;
+    margin-bottom: 16px;
+    opacity: 0;
+    transform: translateY(-8px);
+    transition: all 0.5s ease;
+  }
+
+  .slide.active .slide-number {
+    opacity: 1;
+    transform: translateY(0);
+    transition-delay: 0.1s;
+  }
+
+  h1 {
+    font-size: 38px;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+    line-height: 1.15;
+    margin-bottom: 20px;
+    max-width: 800px;
+    opacity: 0;
+    transform: translateY(12px);
+    transition: all 0.5s ease;
+  }
+
+  .slide.active h1 {
+    opacity: 1;
+    transform: translateY(0);
+    transition-delay: 0.2s;
+  }
+
+  .lead {
+    font-size: 18px;
+    color: var(--text-dim);
+    max-width: 720px;
+    margin-bottom: 40px;
+    opacity: 0;
+    transform: translateY(12px);
+    transition: all 0.5s ease;
+  }
+
+  .slide.active .lead {
+    opacity: 1;
+    transform: translateY(0);
+    transition-delay: 0.3s;
+  }
+
+  .body-content {
+    opacity: 0;
+    transform: translateY(12px);
+    transition: all 0.5s ease;
+  }
+
+  .slide.active .body-content {
+    opacity: 1;
+    transform: translateY(0);
+    transition-delay: 0.4s;
+  }
+
+  /* Chip: angleID/UID pill */
+  .chip {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 3px 8px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--cyan);
+  }
+
+  .chip.warning { color: var(--warning); border-color: rgba(255, 180, 84, 0.3); }
+  .chip.danger  { color: var(--danger); border-color: rgba(255, 107, 107, 0.3); }
+  .chip.dim     { color: var(--text-dim); }
+
+  /* Cards & grids */
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px;
+  }
+
+  .three-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .entity-card h3 {
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    margin-bottom: 16px;
+    color: var(--text-dim);
+  }
+
+  .entity-card.orig h3 { color: var(--cyan); }
+  .entity-card.ghost h3 { color: var(--warning); }
+
+  .field {
+    margin-bottom: 12px;
+  }
+
+  .field-label {
+    font-size: 11px;
+    color: var(--text-faint);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+
+  .field-value {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text);
+    word-break: break-all;
+  }
+
+  .field-value.highlight {
+    color: var(--cyan);
+  }
+
+  .field-value.match {
+    color: var(--warning);
+  }
+
+  /* Navigation */
+  .nav-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(to top, var(--bg) 60%, rgba(13, 17, 21, 0));
+    padding: 32px 32px 24px;
+    z-index: 100;
+  }
+
+  .nav-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .nav-btn {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 10px 18px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: inherit;
+  }
+
+  .nav-btn:hover:not(:disabled) {
+    border-color: var(--cyan-dim);
+    color: var(--cyan);
+  }
+
+  .nav-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+
+  .nav-btn.primary {
+    background: var(--cyan);
+    border-color: var(--cyan);
+    color: var(--bg);
+  }
+
+  .nav-btn.primary:hover:not(:disabled) {
+    background: #00ffff;
+    border-color: #00ffff;
+    color: var(--bg);
+  }
+
+  .dots {
+    display: flex;
+    gap: 8px;
+  }
+
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--border);
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .dot:hover { background: var(--border-bright); }
+  .dot.active {
+    background: var(--cyan);
+    transform: scale(1.3);
+  }
+
+  /* ============= Slide 1: Problem demonstration ============= */
+  .problem-viz {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 40px;
+    padding: 40px 0;
+    flex-wrap: wrap;
+  }
+
+  .mc-icon {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.6s ease;
+  }
+
+  .mc-icon-visual {
+    width: 80px;
+    height: 56px;
+    background: var(--bg-card);
+    border: 2px solid var(--cyan);
+    border-radius: 6px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .mc-icon-visual::before {
+    content: '';
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    right: 6px;
+    bottom: 6px;
+    background: repeating-linear-gradient(
+      90deg,
+      var(--cyan) 0,
+      var(--cyan) 2px,
+      transparent 2px,
+      transparent 6px
+    );
+    opacity: 0.5;
+  }
+
+  .mc-icon-visual.ghost {
+    border-color: var(--warning);
+    border-style: dashed;
+  }
+  .mc-icon-visual.ghost::before {
+    background: repeating-linear-gradient(
+      90deg,
+      var(--warning) 0,
+      var(--warning) 2px,
+      transparent 2px,
+      transparent 6px
+    );
+    opacity: 0.35;
+  }
+
+  .mc-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+
+  .mc-label.ghost { color: var(--warning); }
+
+  .arrow-action {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-faint);
+  }
+
+  .arrow-action svg { stroke: currentColor; }
+  .arrow-action-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+  }
+
+  /* Staged appearance for slide 1 duplets */
+  .slide[data-slide="0"].active .mc-icon[data-stage="2"],
+  .slide[data-slide="0"].active .mc-icon[data-stage="3"] {
+    animation: popIn 0.6s ease forwards;
+  }
+  .slide[data-slide="0"].active .mc-icon[data-stage="2"] { animation-delay: 1s; }
+  .slide[data-slide="0"].active .mc-icon[data-stage="3"] { animation-delay: 1.4s; }
+
+  .mc-icon[data-stage="2"], .mc-icon[data-stage="3"] {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+
+  @keyframes popIn {
+    0% { opacity: 0; transform: scale(0.6); }
+    60% { opacity: 1; transform: scale(1.05); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+
+  /* ============= Slide: Anatomy ============= */
+  .anatomy {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+
+  .angle-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 12px;
+  }
+
+  .angle-item {
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 6px 10px;
+    background: var(--bg-elevated);
+    border-left: 2px solid var(--cyan-dim);
+    color: var(--text-dim);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .angle-item .angle-id {
+    color: var(--text-faint);
+    font-size: 10px;
+  }
+
+  /* ============= Slide: Timeline of events ============= */
+  .timeline {
+    position: relative;
+    padding: 40px 20px;
+    margin-top: 24px;
+  }
+
+  .timeline-axis {
+    position: absolute;
+    top: 80px;
+    left: 40px;
+    right: 40px;
+    height: 2px;
+    background: var(--border);
+  }
+
+  .timeline-axis::before,
+  .timeline-axis::after {
+    content: '';
+    position: absolute;
+    top: -4px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--border-bright);
+  }
+
+  .timeline-axis::before { left: -5px; }
+  .timeline-axis::after { right: -5px; background: var(--cyan); }
+
+  .timeline-events {
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 40px;
+  }
+
+  .tl-event {
+    flex: 1;
+    text-align: center;
+    position: relative;
+  }
+
+  .tl-event::before {
+    content: '';
+    position: absolute;
+    top: 32px;
+    left: 50%;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--bg);
+    border: 3px solid var(--cyan-dim);
+    transform: translateX(-50%);
+  }
+
+  .tl-event.highlight::before {
+    border-color: var(--warning);
+    background: var(--warning);
+  }
+
+  .tl-event.current::before {
+    border-color: var(--cyan);
+    background: var(--cyan);
+    box-shadow: 0 0 0 6px var(--cyan-soft);
+  }
+
+  .tl-date {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-faint);
+    margin-bottom: 8px;
+    letter-spacing: 0.5px;
+  }
+
+  .tl-gap {
+    height: 70px;
+  }
+
+  .tl-description {
+    font-size: 13px;
+    color: var(--text-dim);
+    margin-top: 12px;
+    max-width: 180px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .tl-description strong {
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  .slide[data-slide="3"].active .tl-event {
+    opacity: 0;
+    animation: fadeInUp 0.5s ease forwards;
+  }
+  .slide[data-slide="3"].active .tl-event:nth-child(1) { animation-delay: 0.5s; }
+  .slide[data-slide="3"].active .tl-event:nth-child(2) { animation-delay: 1s; }
+  .slide[data-slide="3"].active .tl-event:nth-child(3) { animation-delay: 1.5s; }
+
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ============= Slide: Match-frame animation ============= */
+  .mf-stage {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 32px;
+    align-items: center;
+    padding: 30px 0;
+  }
+
+  .mf-panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    min-height: 280px;
+  }
+
+  .mf-panel h4 {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-dim);
+    margin-bottom: 16px;
+    font-weight: 500;
+  }
+
+  .mf-arrow {
+    color: var(--cyan-dim);
+    font-size: 32px;
+    text-align: center;
+  }
+
+  .library-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: var(--bg-elevated);
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    margin-bottom: 8px;
+    font-family: var(--mono);
+    font-size: 12px;
+    transition: all 0.4s ease;
+  }
+
+  .library-item.new {
+    border-color: var(--warning);
+    background: rgba(255, 180, 84, 0.08);
+  }
+
+  .library-item .mini-icon {
+    width: 20px;
+    height: 14px;
+    background: var(--cyan);
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  .library-item.new .mini-icon {
+    background: var(--warning);
+  }
+
+  .timeline-mc {
+    padding: 10px 12px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-dim);
+    position: relative;
+  }
+
+  .ghost-attach {
+    margin-top: 10px;
+    padding: 10px;
+    border: 1px dashed var(--warning);
+    border-radius: 6px;
+    background: rgba(255, 180, 84, 0.05);
+    font-size: 11px;
+    color: var(--warning);
+  }
+
+  .ghost-attach-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    margin-bottom: 4px;
+    opacity: 0.8;
+  }
+
+  /* ============= Slide: Solution ============= */
+  .solution-flow {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    margin-top: 20px;
+  }
+
+  .flow-step {
+    flex: 1;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    padding: 20px;
+    position: relative;
+  }
+
+  .flow-step:first-child { border-radius: 10px 0 0 10px; }
+  .flow-step:last-child { border-radius: 0 10px 10px 0; }
+  .flow-step:not(:first-child) { border-left: none; }
+
+  .flow-step.clean {
+    background: rgba(74, 222, 128, 0.05);
+    border-color: rgba(74, 222, 128, 0.3);
+  }
+
+  .flow-step::after {
+    content: '→';
+    position: absolute;
+    right: -12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: var(--bg);
+    padding: 4px 6px;
+    font-size: 18px;
+    color: var(--cyan);
+    z-index: 2;
+  }
+
+  .flow-step:last-child::after { display: none; }
+
+  .flow-step h5 {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--text);
+  }
+
+  .flow-step p {
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.5;
+  }
+
+  .flow-step-num {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--cyan);
+    letter-spacing: 1.5px;
+    margin-bottom: 8px;
+  }
+
+  .flow-step.clean .flow-step-num { color: var(--success); }
+
+  /* ============= Checklist ============= */
+  .checklist {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 20px;
+  }
+
+  .checklist-item {
+    display: flex;
+    gap: 16px;
+    padding: 16px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    align-items: flex-start;
+  }
+
+  .check-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--cyan-soft);
+    color: var(--cyan);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+    font-weight: 600;
+  }
+
+  .checklist-item h5 {
+    font-size: 15px;
+    margin-bottom: 4px;
+    color: var(--text);
+  }
+
+  .checklist-item p {
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.5;
+  }
+
+  /* Callout boxes */
+  .callout {
+    padding: 16px 20px;
+    border-radius: 8px;
+    margin: 16px 0;
+    font-size: 14px;
+    border-left: 3px solid var(--cyan);
+    background: var(--cyan-soft);
+  }
+
+  .callout.warning {
+    border-color: var(--warning);
+    background: rgba(255, 180, 84, 0.08);
+  }
+
+  .callout-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    font-weight: 600;
+    color: var(--cyan);
+    margin-bottom: 6px;
+  }
+
+  .callout.warning .callout-label { color: var(--warning); }
+
+  /* Comparison row for slide 5 */
+  .compare-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 16px;
+  }
+
+  .compare-row {
+    display: grid;
+    grid-template-columns: 150px 1fr 1fr;
+    gap: 12px;
+    align-items: center;
+    padding: 10px 12px;
+    background: var(--bg-elevated);
+    border-radius: 6px;
+    font-size: 13px;
+  }
+
+  .compare-row.header {
+    background: transparent;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-faint);
+    padding-bottom: 4px;
+  }
+
+  .compare-row .label {
+    color: var(--text-dim);
+    font-size: 12px;
+  }
+
+  .compare-row .val {
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+
+  .compare-row .val.match-yes { color: var(--warning); }
+  .compare-row .val.match-no { color: var(--cyan); }
+
+  /* Final slide */
+  .summary-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 24px;
+  }
+
+  .summary-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px;
+  }
+
+  .summary-card h4 {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: var(--cyan);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .summary-card ul {
+    list-style: none;
+    padding: 0;
+  }
+
+  .summary-card li {
+    font-size: 14px;
+    color: var(--text-dim);
+    padding: 6px 0;
+    padding-left: 20px;
+    position: relative;
+    line-height: 1.5;
+  }
+
+  .summary-card li::before {
+    content: '▸';
+    position: absolute;
+    left: 0;
+    color: var(--cyan);
+  }
+
+  /* Keyboard hint */
+  .keyboard-hint {
+    position: fixed;
+    top: 20px;
+    right: 32px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-faint);
+    letter-spacing: 0.5px;
+  }
+
+  kbd {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-family: inherit;
+    font-size: 10px;
+    color: var(--text-dim);
+    margin: 0 2px;
+  }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    .three-col { grid-template-columns: 1fr; }
+    .anatomy { grid-template-columns: 1fr; }
+    .mf-stage { grid-template-columns: 1fr; }
+    .mf-arrow { transform: rotate(90deg); }
+    .summary-grid { grid-template-columns: 1fr; }
+    .solution-flow { flex-direction: column; }
+    .flow-step { border-radius: 10px !important; border-left: 1px solid var(--border) !important; }
+    .flow-step::after { display: none; }
+    h1 { font-size: 28px; }
+    .keyboard-hint { display: none; }
+    .compare-row { grid-template-columns: 1fr; gap: 4px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="keyboard-hint">Naviger med <kbd>←</kbd> <kbd>→</kbd></div>
+
+<div class="app">
+
+  <header>
+    <div class="brand">
+      <div class="brand-mark"></div>
+      <div class="brand-text">Post-Production · Technical Explainer</div>
+    </div>
+    <div class="progress-label" id="progress-label">01 / 09</div>
+  </header>
+
+  <main class="stage" id="stage">
+
+    <!-- ============= SLIDE 0: Problem statement ============= -->
+    <section class="slide active" data-slide="0">
+      <div class="slide-number">01 · HVAD SER VI</div>
+      <h1>Én multicam bliver pludselig til tre</h1>
+      <p class="lead">Når en assistent match-framer på et multicam-clip i en tidslinje, skaber FCP to kopier i library'et — med navne som <span class="chip dim">… 1</span> og <span class="chip dim">… 2</span>. De ligner den originale, men de er ikke identiske, og de har hver sit unikke fingeraftryk.</p>
+
+      <div class="body-content">
+        <div class="problem-viz">
+          <div class="mc-icon" data-stage="1">
+            <div class="mc-icon-visual"></div>
+            <div class="mc-label">Multicam (ORIG)</div>
+          </div>
+          <div class="arrow-action">
+            <svg width="40" height="40" viewBox="0 0 40 40" fill="none" stroke-width="1.5">
+              <circle cx="20" cy="20" r="14"/>
+              <circle cx="20" cy="20" r="2" fill="currentColor" stroke="none"/>
+              <path d="M20 6 L20 10"/>
+              <path d="M20 30 L20 34"/>
+              <path d="M6 20 L10 20"/>
+              <path d="M30 20 L34 20"/>
+            </svg>
+            <span class="arrow-action-label">Match Frame</span>
+          </div>
+          <div style="display: flex; gap: 16px;">
+            <div class="mc-icon" data-stage="1">
+              <div class="mc-icon-visual"></div>
+              <div class="mc-label">Multicam</div>
+            </div>
+            <div class="mc-icon" data-stage="2">
+              <div class="mc-icon-visual ghost"></div>
+              <div class="mc-label ghost">Multicam 1</div>
+            </div>
+            <div class="mc-icon" data-stage="3">
+              <div class="mc-icon-visual ghost"></div>
+              <div class="mc-label ghost">Multicam 2</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="callout warning">
+          <div class="callout-label">Det vigtige at forstå</div>
+          Dupletterne er ikke tilfældige. De bærer en bestemt tilstand af multicam'en — en ældre tilstand — og hver gang match-frame udføres, oprettes en ny.
+        </div>
+      </div>
+    </section>
+
+    <!-- ============= SLIDE 1: Anatomy ============= -->
+    <section class="slide" data-slide="1">
+      <div class="slide-number">02 · TEKNISK ANATOMI</div>
+      <h1>Hvad består en multicam egentlig af?</h1>
+      <p class="lead">For at forstå duplikationen skal vi vide hvad FCP gemmer når den gemmer en multicam. Der er to lag: <strong>master</strong>-objektet i library'et, og <strong>brugen</strong> af det i en tidslinje.</p>
+
+      <div class="body-content">
+        <div class="anatomy">
+          <div class="card">
+            <h3 style="color: var(--cyan); font-size: 13px; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 16px;">Master (library-objekt)</h3>
+            <div class="field">
+              <div class="field-label">Navn</div>
+              <div class="field-value">100K_S01_E02_…_Multicam</div>
+            </div>
+            <div class="field">
+              <div class="field-label">UID <span style="color: var(--cyan); text-transform: none; letter-spacing: 0;">← permanent fingeraftryk</span></div>
+              <div class="field-value highlight">bE6PqP2TRO2D7xuONhMJQA</div>
+            </div>
+            <div class="field">
+              <div class="field-label">modDate</div>
+              <div class="field-value">2026-04-15 16:55:17</div>
+            </div>
+            <div class="field">
+              <div class="field-label">Angles (22 stk)</div>
+              <div class="angle-list">
+                <div class="angle-item"><span>01_OV_KAM05</span><span class="angle-id">Ai/qlxd…</span></div>
+                <div class="angle-item"><span>02_EFP_KAM1</span><span class="angle-id">KgJ4UEN…</span></div>
+                <div class="angle-item"><span>02_EFP_KAM8</span><span class="angle-id">kjkqKY1…</span></div>
+                <div class="angle-item"><span>03_Lydkanaler_K2</span><span class="angle-id">KdHYKkX…</span></div>
+                <div style="font-size: 11px; color: var(--text-faint); padding: 4px 10px;">… og 18 til</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3 style="color: var(--warning); font-size: 13px; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 16px;">Brug (mc-clip i spine)</h3>
+            <div class="field">
+              <div class="field-label">Reference til master</div>
+              <div class="field-value highlight">ref="r1" → UID bE6Pq…</div>
+            </div>
+            <div class="field">
+              <div class="field-label">Aktiv video-angle</div>
+              <div class="field-value">02_EFP_KAM1</div>
+            </div>
+            <div class="field">
+              <div class="field-label">Aktiv audio-angle</div>
+              <div class="field-value">03_Lydkanaler_K2</div>
+            </div>
+            <div class="field">
+              <div class="field-label">Trim</div>
+              <div class="field-value">start + duration i tidslinje</div>
+            </div>
+            <div class="field">
+              <div class="field-label">Role-overrides</div>
+              <div class="field-value">(per-brug audio role state)</div>
+            </div>
+
+            <div class="callout" style="margin-top: 20px; margin-bottom: 0;">
+              <div class="callout-label">Nøgle-princip</div>
+              En mc-clip er <em>ikke</em> en kopi af master'en. Den er en pegefinger med et valgt angle og et trim.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============= SLIDE 2: UID comparison ============= -->
+    <section class="slide" data-slide="2">
+      <div class="slide-number">03 · FINGERAFTRYKKENE</div>
+      <h1>Tre UIDs, tre objekter — men kun én "rigtig"</h1>
+      <p class="lead">Hvis du kigger på de tre multicam-objekter i library'et, ser de tilsyneladende ens ud. Men FCP identificerer ikke multicams på navn — den identificerer dem på UID. Og UIDs afslører præcis hvad der er sket.</p>
+
+      <div class="body-content">
+        <div class="three-col">
+          <div class="card entity-card orig">
+            <h3>ORIG (aktuel master)</h3>
+            <div class="field">
+              <div class="field-label">UID</div>
+              <div class="field-value highlight">bE6PqP2TRO2D7xuONhMJQA</div>
+            </div>
+            <div class="field">
+              <div class="field-label">modDate</div>
+              <div class="field-value">2026-04-15 16:55:17</div>
+            </div>
+            <div class="field">
+              <div class="field-label">Brøker</div>
+              <div class="field-value">958072/25 (normaliseret)</div>
+            </div>
+            <div class="field">
+              <div class="field-label">ENG7_0250 position</div>
+              <div class="field-value">8015.40s</div>
+            </div>
+          </div>
+
+          <div class="card entity-card ghost">
+            <h3>Duplet 1 (spøgelse)</h3>
+            <div class="field">
+              <div class="field-label">UID</div>
+              <div class="field-value" style="color: var(--warning)">ARyUeB2ORCmRpTpliivHNw</div>
+            </div>
+            <div class="field">
+              <div class="field-label">modDate</div>
+              <div class="field-value match">2026-03-02 22:56:13</div>
+            </div>
+            <div class="field">
+              <div class="field-label">Brøker</div>
+              <div class="field-value">95807200/2500 (unormaliseret)</div>
+            </div>
+            <div class="field">
+              <div class="field-label">ENG7_0250 position</div>
+              <div class="field-value">8014.92s</div>
+            </div>
+          </div>
+
+          <div class="card entity-card ghost">
+            <h3>Duplet 2 (spøgelse)</h3>
+            <div class="field">
+              <div class="field-label">UID</div>
+              <div class="field-value" style="color: var(--warning)">7OzQq5dhQMqEH8dQ1DKfvQ</div>
+            </div>
+            <div class="field">
+              <div class="field-label">modDate</div>
+              <div class="field-value match">2026-03-02 22:56:13</div>
+            </div>
+            <div class="field">
+              <div class="field-label">Brøker</div>
+              <div class="field-value">95807200/2500 (unormaliseret)</div>
+            </div>
+            <div class="field">
+              <div class="field-label">ENG7_0250 position</div>
+              <div class="field-value">8014.92s</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="callout">
+          <div class="callout-label">To observationer</div>
+          <strong>1.</strong> Duplet 1 og Duplet 2 deler nøjagtig samme modDate og samme indhold — de er det samme spøgelse, genskabt to gange.<br>
+          <strong>2.</strong> Spøgelserne er frosset på en tilstand fra 2. marts, mens ORIG er blevet opdateret senest 15. april.
+        </div>
+      </div>
+    </section>
+
+    <!-- ============= SLIDE 3: Timeline of events ============= -->
+    <section class="slide" data-slide="3">
+      <div class="slide-number">04 · TIDSLINJE</div>
+      <h1>Hvad skete der mellem 2. marts og 15. april?</h1>
+      <p class="lead">Spøgelserne er ikke magi. De er et ældre snapshot af multicam'en der har "hængt fast" et sted. Tidslinjen for hvad der skete forklarer hvorfor.</p>
+
+      <div class="body-content">
+        <div class="timeline">
+          <div class="timeline-axis"></div>
+          <div class="timeline-events">
+            <div class="tl-event highlight">
+              <div class="tl-date">2. MARTS 2026</div>
+              <div class="tl-gap"></div>
+              <p class="tl-description"><strong>Multicam i tilstand A.</strong> KAM8 er aktiv video. Role-overrides for Jesper W, Kirstine B og Steffen T er sat.</p>
+            </div>
+            <div class="tl-event">
+              <div class="tl-date">~ MARTS → APRIL</div>
+              <div class="tl-gap"></div>
+              <p class="tl-description"><strong>Edits sker</strong>: ENG7_0250 nudges 12 frames. Aktivt angle skiftes til KAM1. Role-overrides ryddes.</p>
+            </div>
+            <div class="tl-event current">
+              <div class="tl-date">15. APRIL 2026</div>
+              <div class="tl-gap"></div>
+              <p class="tl-description"><strong>Multicam i tilstand B.</strong> ORIG gemmes med ny UID og normaliserede brøker.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="callout warning" style="margin-top: 40px;">
+          <div class="callout-label">Problemet</div>
+          Mellem tilstand A og tilstand B blev hovedtidslinjens mc-clip ikke synkroniseret fuldt ud. Den bærer stadig metadata der peger tilbage til tilstand A — et latent snapshot der kun materialiseres når match-frame udføres.
+        </div>
+      </div>
+    </section>
+
+    <!-- ============= SLIDE 4: Match-frame mechanism ============= -->
+    <section class="slide" data-slide="4">
+      <div class="slide-number">05 · TRIGGEREN</div>
+      <h1>Match-frame materialiserer spøgelset</h1>
+      <p class="lead">Når man match-framer, beder man FCP om at finde "master-clip'en for dette punkt i tidslinjen". Normalt slår den bare op på master'ens UID. Men når mc-clip'en bærer latent snapshot-data, skriver FCP i stedet det snapshot ud som et nyt library-objekt.</p>
+
+      <div class="body-content">
+        <div class="mf-stage">
+          <div class="mf-panel">
+            <h4>Tidslinje (før match-frame)</h4>
+            <div class="timeline-mc">
+              mc-clip ref="r1"<br>
+              <span style="color: var(--text-faint)">aktiv: 02_EFP_KAM8</span>
+            </div>
+            <div class="ghost-attach">
+              <div class="ghost-attach-label">Latent snapshot</div>
+              Tilstand fra 2. marts · unormaliserede brøker · role-overrides sat
+            </div>
+          </div>
+
+          <div class="mf-arrow">→</div>
+
+          <div class="mf-panel">
+            <h4>Library (efter match-frame)</h4>
+            <div class="library-item">
+              <div class="mini-icon"></div>
+              <span>Multicam · UID bE6Pq…</span>
+            </div>
+            <div class="library-item new" id="new-duplet">
+              <div class="mini-icon"></div>
+              <span>Multicam 1 · UID ARyUeB…</span>
+            </div>
+            <div style="font-size: 11px; color: var(--text-faint); margin-top: 12px; padding-left: 4px;">Næste match-frame → Multicam 2 med endnu ny UID</div>
+          </div>
+        </div>
+
+        <div class="callout">
+          <div class="callout-label">Hvorfor forskellige UIDs hver gang</div>
+          FCP genererer en frisk UID hver gang den materialiserer snapshot'et. Det er derfor Duplet 1 og Duplet 2 er indholdsmæssigt identiske men har forskellige UIDs — samme spøgelse, to re-incarnationer.
+        </div>
+      </div>
+    </section>
+
+    <!-- ============= SLIDE 5: Evidence ============= -->
+    <section class="slide" data-slide="5">
+      <div class="slide-number">06 · BEVISER</div>
+      <h1>Fingeraftrykkene der afslører mekanismen</h1>
+      <p class="lead">Hypotesen holder hvis — og kun hvis — hver observation passer. Her er sammenligningen af det vi kan måle.</p>
+
+      <div class="body-content">
+        <div class="compare-rows">
+          <div class="compare-row header">
+            <div>Attribut</div>
+            <div>Duplet 1 vs Duplet 2</div>
+            <div>Duplet vs ORIG</div>
+          </div>
+          <div class="compare-row">
+            <div class="label">UID</div>
+            <div class="val match-no">Forskellige</div>
+            <div class="val match-no">Forskellige</div>
+          </div>
+          <div class="compare-row">
+            <div class="label">modDate (master)</div>
+            <div class="val match-yes">Identiske (2. marts)</div>
+            <div class="val match-no">Forskellige</div>
+          </div>
+          <div class="compare-row">
+            <div class="label">Brøk-format</div>
+            <div class="val match-yes">Begge unormaliserede</div>
+            <div class="val match-no">Duplet: unorm · ORIG: norm</div>
+          </div>
+          <div class="compare-row">
+            <div class="label">22 angleIDs</div>
+            <div class="val match-yes">Identiske</div>
+            <div class="val match-yes">Identiske</div>
+          </div>
+          <div class="compare-row">
+            <div class="label">ENG7_0250 position</div>
+            <div class="val match-yes">Begge 8014.92s</div>
+            <div class="val match-no">ORIG: 8015.40s (+12 frames)</div>
+          </div>
+          <div class="compare-row">
+            <div class="label">Aktiv video-angle</div>
+            <div class="val match-yes">Begge KAM8</div>
+            <div class="val match-no">ORIG: KAM1</div>
+          </div>
+          <div class="compare-row">
+            <div class="label">Audio role-overrides</div>
+            <div class="val match-yes">Begge har Jesper/Kirstine/Steffen</div>
+            <div class="val match-no">ORIG har ingen</div>
+          </div>
+          <div class="compare-row">
+            <div class="label">Bookmark-bytes</div>
+            <div class="val match-no">Forskellige</div>
+            <div class="val match-no">Forskellige</div>
+          </div>
+        </div>
+
+        <div class="callout" style="margin-top: 20px;">
+          <div class="callout-label">Konklusion</div>
+          Dupletterne er indholdsmæssigt identiske og matcher et tidligere snapshot. ORIG afviger fra snapshot'et på præcis de punkter man ville forvente efter edits. Mekanismen holder.
+        </div>
+      </div>
+    </section>
+
+    <!-- ============= SLIDE 6: Solution / XML round-trip ============= -->
+    <section class="slide" data-slide="6">
+      <div class="slide-number">07 · LØSNING</div>
+      <h1>XML round-trip renser spøgelset ud</h1>
+      <p class="lead">FCPXML indeholder kun den eksplicitte struktur — referencer, trim, aktivt angle. Det <em>latente</em> snapshot i mc-clip bliver aldrig skrevet ned. Derfor: eksporter → importer = ren slate.</p>
+
+      <div class="body-content">
+        <div class="solution-flow">
+          <div class="flow-step">
+            <div class="flow-step-num">01</div>
+            <h5>Sikkerhedskopi</h5>
+            <p>Lav en kopi af library'et før du rører ved noget. Paranoia er billig, tabt arbejde er dyrt.</p>
+          </div>
+          <div class="flow-step">
+            <div class="flow-step-num">02</div>
+            <h5>Eksporter FCPXML</h5>
+            <p>Marker projektet/tidslinjen → <span class="chip dim">File → Export XML…</span> · Best Effort er fint.</p>
+          </div>
+          <div class="flow-step">
+            <div class="flow-step-num">03</div>
+            <h5>Importer i friskt library</h5>
+            <p>Opret et nyt library og importer XML'en. FCP genopbygger mc-clips ud fra XML alene.</p>
+          </div>
+          <div class="flow-step clean">
+            <div class="flow-step-num">04</div>
+            <h5>Match-frame igen</h5>
+            <p>Spøgelset er væk. Ingen latent snapshot betyder ingen duplikat-dannelse.</p>
+          </div>
+        </div>
+
+        <div class="callout" style="margin-top: 28px;">
+          <div class="callout-label">Hvad der bevares</div>
+          Timeline-positioner, aktivt angle pr. mc-clip, role-overrides, markers, keywords. Alt det eksplicitte.
+        </div>
+
+        <div class="callout warning">
+          <div class="callout-label">Hvad der går tabt</div>
+          UID-kontinuitet (nyt internt ID), cached miniaturer (regenereres automatisk), evt. det latente snapshot (det er jo pointen).
+        </div>
+      </div>
+    </section>
+
+    <!-- ============= SLIDE 7: Prevention ============= -->
+    <section class="slide" data-slide="7">
+      <div class="slide-number">08 · FOREBYGGELSE</div>
+      <h1>Sådan undgår vi at problemet opstår</h1>
+      <p class="lead">XML round-trip er kurativt. Men vi vil helst ikke være i situationen til at starte med. Her er de praktiske forholdsregler for assistenterne.</p>
+
+      <div class="body-content">
+        <div class="checklist">
+          <div class="checklist-item">
+            <div class="check-icon">1</div>
+            <div>
+              <h5>Undgå strukturelle ændringer på multicam mens timelines bruger den</h5>
+              <p>Hvis du nudger clips, ændrer angles eller resyncer — gør det når hovedtidslinjerne er lukkede. Re-open timelines bagefter så FCP får chancen for at re-resolve referencer fuldt ud.</p>
+            </div>
+          </div>
+
+          <div class="checklist-item">
+            <div class="check-icon">2</div>
+            <div>
+              <h5>Vær opmærksom på uoverensstemmende modDates</h5>
+              <p>Hvis master-multicam'ens modDate er <em>nyere</em> end mc-clip'ens modDate i spine, er der risiko for snapshot-drift. Dette er et tegn på at tidslinjen ikke er synkroniseret med masteren.</p>
+            </div>
+          </div>
+
+          <div class="checklist-item">
+            <div class="check-icon">3</div>
+            <div>
+              <h5>Brug match-frame sparsomt når du ved der er inkonsistens</h5>
+              <p>Hvis du allerede har set duplet-dannelse, så undgå yderligere match-frames før du har kørt round-trip. Hver match-frame skaber endnu et library-objekt der skal ryddes op senere.</p>
+            </div>
+          </div>
+
+          <div class="checklist-item">
+            <div class="check-icon">4</div>
+            <div>
+              <h5>Periodisk XML-renselse ved stor bugs</h5>
+              <p>For kritiske projekter med mange multicam-referencer er det værd at køre en round-trip mellem major edit-faser — ligesom man tømmer caches mellem sessioner.</p>
+            </div>
+          </div>
+
+          <div class="checklist-item">
+            <div class="check-icon">5</div>
+            <div>
+              <h5>Script-baseret detektion (fremtidigt værktøj)</h5>
+              <p>En lille <span class="chip dim">.py</span> der scanner et library's eksporterede XML for mc-clips hvor modDate afviger fra master-multicam'ens modDate. Det giver os en early-warning for hvilke timelines der er i risikozonen — kandidat til FCPMerge-familien.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============= SLIDE 8: Summary ============= -->
+    <section class="slide" data-slide="8">
+      <div class="slide-number">09 · OPSUMMERING</div>
+      <h1>I korte træk</h1>
+      <p class="lead">Når assistenter spørger hvorfor multicam-dupletter opstår og hvad der skal gøres, er det her den korte version.</p>
+
+      <div class="body-content">
+        <div class="summary-grid">
+          <div class="summary-card">
+            <h4>Problemet</h4>
+            <ul>
+              <li>Match-frame skaber "Multicam 1", "Multicam 2" osv. i library'et</li>
+              <li>Dupletterne er spøgelser af en ældre multicam-tilstand</li>
+              <li>Hver match-frame genererer en ny UID men samme spøgelsesindhold</li>
+            </ul>
+          </div>
+
+          <div class="summary-card">
+            <h4>Årsagen</h4>
+            <ul>
+              <li>Master multicam er blevet ændret efter timeline blev bygget</li>
+              <li>Timeline's mc-clip bærer et latent snapshot af den ældre tilstand</li>
+              <li>Match-frame trigger materialiserer snapshot'et som nyt library-objekt</li>
+            </ul>
+          </div>
+
+          <div class="summary-card">
+            <h4>Løsningen (reaktiv)</h4>
+            <ul>
+              <li>Eksporter projekt/tidslinje som FCPXML</li>
+              <li>Importer i friskt library</li>
+              <li>Latent snapshot skrives ikke til XML → spøgelset forsvinder</li>
+            </ul>
+          </div>
+
+          <div class="summary-card">
+            <h4>Løsningen (proaktiv)</h4>
+            <ul>
+              <li>Undgå struktur-edits på multicams mens timelines er åbne</li>
+              <li>Re-open timelines efter master-edits</li>
+              <li>Script-baseret detektion af modDate-drift (roadmap)</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="callout" style="margin-top: 32px; text-align: center;">
+          <div class="callout-label">Én sætning at huske</div>
+          <div style="font-size: 16px; color: var(--text); margin-top: 8px;">"Duplikater er et spøgelse af en ældre master der hænger fast i mc-clip'en — XML round-trip renser det ud, og disciplin omkring editrækkefølge forebygger det."</div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <nav class="nav-bar">
+    <div class="nav-inner">
+      <button class="nav-btn" id="prev-btn">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 2 L3 7 L9 12"/></svg>
+        Forrige
+      </button>
+      <div class="dots" id="dots"></div>
+      <button class="nav-btn primary" id="next-btn">
+        Næste
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 2 L11 7 L5 12"/></svg>
+      </button>
+    </div>
+  </nav>
+
+</div>
+
+<script>
+(function() {
+  const slides = document.querySelectorAll('.slide');
+  const total = slides.length;
+  const prevBtn = document.getElementById('prev-btn');
+  const nextBtn = document.getElementById('next-btn');
+  const progressLabel = document.getElementById('progress-label');
+  const dotsContainer = document.getElementById('dots');
+
+  let current = 0;
+
+  // Build dots
+  for (let i = 0; i < total; i++) {
+    const dot = document.createElement('div');
+    dot.className = 'dot' + (i === 0 ? ' active' : '');
+    dot.addEventListener('click', () => goTo(i));
+    dotsContainer.appendChild(dot);
+  }
+  const dots = dotsContainer.querySelectorAll('.dot');
+
+  function updateUI() {
+    slides.forEach((s, i) => s.classList.toggle('active', i === current));
+    dots.forEach((d, i) => d.classList.toggle('active', i === current));
+    progressLabel.textContent =
+      String(current + 1).padStart(2, '0') + ' / ' + String(total).padStart(2, '0');
+    prevBtn.disabled = current === 0;
+    nextBtn.disabled = current === total - 1;
+    nextBtn.innerHTML = current === total - 1
+      ? 'Færdig ✓'
+      : 'Næste <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 2 L11 7 L5 12"/></svg>';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function goTo(idx) {
+    if (idx < 0 || idx >= total) return;
+    current = idx;
+    updateUI();
+  }
+
+  prevBtn.addEventListener('click', () => goTo(current - 1));
+  nextBtn.addEventListener('click', () => goTo(current + 1));
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowLeft') goTo(current - 1);
+    if (e.key === 'ArrowRight') goTo(current + 1);
+  });
+
+  updateUI();
+})();
+</script>
+
+</body>
+</html>
