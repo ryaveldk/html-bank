@@ -1,0 +1,56 @@
+{
+  "categories" : [
+    {
+      "chapters" : [
+        {
+          "added" : "2026-04-15",
+          "file" : "kapitel-01-embeddings.html",
+          "summary" : "CLIP, cosine similarity, MobileCLIP 2 og hands-on findings fra Bali-materiale.",
+          "title" : "Visuelle embeddings & VisualScanner"
+        },
+        {
+          "added" : "2026-04-16",
+          "file" : "kapitel-02-rag.html",
+          "summary" : "Tokens, context windows, chunking og vector databases med InterviewNavigator som eksempel.",
+          "title" : "RAG & token-økonomi"
+        }
+      ],
+      "description" : "Embeddings, RAG, token-økonomi og hands-on AI i post-flow.",
+      "id" : "maskinlaering",
+      "name" : "Maskinlæring & AI"
+    },
+    {
+      "chapters" : [
+        {
+          "added" : "2026-04-17",
+          "file" : "kapitel-03-fcp-nfs.html",
+          "summary" : "SQLite over NFS, WAL, fillåsning, fsync, korruption og RAID 6 write penalty.",
+          "title" : "FCP Libraries & NFS"
+        },
+        {
+          "added" : "2026-04-17",
+          "file" : "multicam_duplication_explainer.html",
+          "summary" : "Teknisk forklaring af multicam-duplikering i FCP og hvorfor det kan opstå.",
+          "title" : "Multicam-duplikation"
+        }
+      ],
+      "description" : "Storage, netværk, fillåsning og korruptionsanalyse.",
+      "id" : "infrastruktur",
+      "name" : "Infrastruktur & Systemer"
+    },
+    {
+      "chapters" : [
+        {
+          "added" : "2026-04-17",
+          "file" : "workflow.html",
+          "summary" : "Fra idé til live på GitHub Pages — drag-and-drop, commit, push.",
+          "title" : "End-to-end workflow"
+        }
+      ],
+      "description" : "Arbejdsgange, opsætning og daglig praksis.",
+      "id" : "workflows",
+      "name" : "Workflows & Processer"
+    }
+  ],
+  "updatedAt" : "2026-04-18T10:44:34Z"
+}
