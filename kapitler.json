@@ -41,12 +41,6 @@
     {
       "chapters" : [
         {
-          "added" : "2026-04-18",
-          "file" : "open_onepager_v2.html",
-          "summary" : "Opdatering af Open-appen og FCP-Library-adgang, med fokus på optimering af post-afdelingens arbejdsgange.",
-          "title" : "Open: Nyt look og ny funktion"
-        },
-        {
           "added" : "2026-04-17",
           "file" : "workflow.html",
           "summary" : "Fra idé til live på GitHub Pages — drag-and-drop, commit, push.",
@@ -58,5 +52,5 @@
       "name" : "Workflows & Processer"
     }
   ],
-  "updatedAt" : "2026-04-18T10:49:29Z"
+  "updatedAt" : "2026-04-18T11:11:10Z"
 }
